@@ -7,6 +7,7 @@ import torchvision.transforms as transforms
 from torchvision import models, datasets
 import gensim.downloader
 import numpy as np
+import sys
 
 word_vectors = None
 
@@ -47,10 +48,13 @@ def set_up_model(out_features=10, loss=nn.CrossEntropyLoss()):
     model.fc = nn.Linear(in_features=512, out_features=out_features)
     criterion = loss
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=5e-4)
-    return model, criterion, optimizer
+    # and a learning rate scheduler
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+    return model, criterion, optimizer, scheduler
 
-def train_model(model, trainloader, optimizer, criterion, epochs=15, verbose=False, emb_model=False):
+def train_model(model, trainloader, optimizer, criterion, scheduler, epochs=15, verbose=False, emb_model=False):
     model.train()
+    losses = []
     if emb_model:
         print("########## {} ##########".format("Embedding Model"))
     else:
@@ -77,12 +81,13 @@ def train_model(model, trainloader, optimizer, criterion, epochs=15, verbose=Fal
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+            scheduler.step()
+            train_loss += loss.item()
 
             # print statistics
             if verbose:
                 if emb_model:
                     # print statistics
-                    train_loss += loss.item()
                     total += labels.size(0)
                     labels, outputs = labels.to("cpu"), outputs.to("cpu")
                     for l, o in zip(labels, outputs):
@@ -96,15 +101,19 @@ def train_model(model, trainloader, optimizer, criterion, epochs=15, verbose=Fal
 
                 else:
                     # print statistics
-                    train_loss += loss.item()
                     _, predicted = outputs.max(1)
                     total += labels.size(0)
                     correct += predicted.eq(labels).sum().item()
                     if i % 200 == 199:    # print every 200 mini-batches
                         print("Loss: {} | Acc: {} | {}/{}".format(train_loss/200, 100.*correct/total, correct, total))
                         train_loss = 0
+
+        epoch_loss = train_loss / len(trainloader)
+        losses.append(epoch_loss)
+        print(epoch_loss)
     if verbose:
         print('Finished Training')
+    print(losses)
     return model
 
 if __name__ == "__main__":
@@ -112,14 +121,18 @@ if __name__ == "__main__":
     #TODO: Add check-pointing
     #TODO: Add time logging
 
-    # train emb model
-    trainloader = load_data_cifar10(True, True)
-    model, criterion, optimizer = set_up_model(out_features=300, loss=nn.MSELoss())
-    model = train_model(model, trainloader, optimizer, criterion, epochs=20, verbose=False, emb_model=True)
-    torch.save(model.state_dict(), "/nethome/bdevnani3/raid/trained_models/vis_lang/pred_emb.pt")
+    if str(sys.argv[1]) == "b":
+        # train base model
+        trainloader = load_data_cifar10()
+        model, criterion, optimizer, scheduler = set_up_model()
+        model = train_model(model, trainloader, optimizer, criterion, scheduler, epochs=200, verbose=False)
+        torch.save(model.state_dict(), "/nethome/bdevnani3/raid/trained_models/vis_lang/pred_class.pt")
 
-    # train base model
-    trainloader = load_data_cifar10()
-    model, criterion, optimizer = set_up_model()
-    model = train_model(model, trainloader, optimizer, criterion, epochs=20, verbose=False)
-    torch.save(model.state_dict(), "/nethome/bdevnani3/raid/trained_models/vis_lang/pred_class.pt")
+    else:
+        # train emb model
+        trainloader = load_data_cifar10(True, True)
+        model, criterion, optimizer, scheduler = set_up_model(out_features=300, loss=nn.MSELoss())
+        model = train_model(model, trainloader, optimizer, criterion, scheduler, epochs=200, verbose=False, emb_model=True)
+        torch.save(model.state_dict(), "/nethome/bdevnani3/raid/trained_models/vis_lang/pred_emb.pt")
+
+
