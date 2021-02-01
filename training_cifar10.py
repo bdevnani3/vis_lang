@@ -115,11 +115,11 @@ if __name__ == "__main__":
     # train emb model
     trainloader = load_data_cifar10(True, True)
     model, criterion, optimizer = set_up_model(out_features=300, loss=nn.MSELoss())
-    model = train_model(model, trainloader, optimizer, criterion, epochs=20, verbose=True, emb_model=True)
+    model = train_model(model, trainloader, optimizer, criterion, epochs=20, verbose=False, emb_model=True)
     torch.save(model.state_dict(), "/nethome/bdevnani3/raid/trained_models/vis_lang/pred_emb.pt")
 
     # train base model
     trainloader = load_data_cifar10()
     model, criterion, optimizer = set_up_model()
-    model = train_model(model, trainloader, optimizer, criterion, epochs=20, verbose=True)
+    model = train_model(model, trainloader, optimizer, criterion, epochs=20, verbose=False)
     torch.save(model.state_dict(), "/nethome/bdevnani3/raid/trained_models/vis_lang/pred_class.pt")
