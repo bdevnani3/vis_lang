@@ -21,7 +21,7 @@ def load_data_cifar10(train=True):
     dataset = datasets.CIFAR10(root='/nethome/bdevnani3/raid/data', train=train,
                                             download=True, transform=transform)
 
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64,
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=128,
                                               shuffle=True, num_workers=8)
     return dataloader
 
@@ -32,9 +32,13 @@ def set_up_model():
 
     criterion = nn.CrossEntropyLoss()
 
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=5e-4)
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
 
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+    
+    if torch.cuda.is_available():
+        model.cuda()
+        criterion.cuda()
 
     return model, criterion, optimizer, scheduler
 
@@ -54,8 +58,6 @@ def train_model():
         optimizer.zero_grad()
 
         # forward + backward + optimize
-        if torch.cuda.is_available():
-            model.cuda()
         outputs = model(inputs)
         loss = criterion(outputs, labels)
         loss.backward()
@@ -86,8 +88,6 @@ def validate_model(epoch):
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             inputs, labels = inputs.to(device), labels.to(device)
 
-            if torch.cuda.is_available():
-                model.cuda()
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             test_loss += loss.item()
