@@ -77,7 +77,11 @@ def set_up_model():
 
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
 
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+    # This did worse vvv      >:(
+    # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+
+    # Note, you only need to run this for 200 epochs but I just left the other steps there in case
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [150, 250, 350], gamma=0.1)
 
     if torch.cuda.is_available():
         model.cuda()
