@@ -1,0 +1,268 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+import models
+
+import os
+import time
+
+
+class Base:
+    """
+    Base class for handling experiments.
+    """
+
+    def __init__(
+        self,
+        root_path: str = ".",
+        project_path: str = "vis_lang",
+        variant_name: str = "base",
+        epochs: int = 200,
+    ):
+        self.root_path = root_path
+        self.project_path = project_path
+        self.variant_name = variant_name
+        self.epochs = epochs
+        self.checkpoints_path = os.path.join(
+            self.root_path, self.project_path, self.variant_name, "models/"
+        )
+        make_dirs(self.checkpoints_path)
+        self.plots_path = os.path.join(
+            self.root_path, self.project_path, self.variant_name, "plots/"
+        )
+        make_dirs(self.plots_path)
+
+        self.class_names = None
+        self.train_loader = None
+        self.test_loader = None
+        self.model = None
+        self.criterion = None
+        self.optimizer = None
+        self.scheduler = None
+        self.train_losses = []
+        self.train_accuracy = []
+        self.test_losses = []
+        self.test_accuracy = []
+        self.best_accuracy = 0
+        self.min_loss = np.inf
+
+        # Logs
+        self.logs_path = os.path.join(
+            self.root_path, project_path, self.variant_name, "logs.txt"
+        )
+
+    def load_data(self):
+        """
+        Populate self.train_loader and self.test_loader with desired datasets.
+        """
+        NotImplementedError
+
+    def set_up_model_architecture(self, num_features_in_last_layer: int):
+        """
+        Set up architecture of the model. Since we will most likely be altering the final
+        layer of pre-existing architectures, this supports that functionality. Initialize
+        self.model.
+        """
+        model = models.resnet18()
+        model.linear = nn.Linear(
+            in_features=512, out_features=num_features_in_last_layer
+        )
+        self.model = model
+        if torch.cuda.is_available():
+            self.model.cuda()
+
+    def init_model_helpers(self, criterion):
+        self.criterion = criterion()
+        self.optimizer = optim.SGD(
+            self.model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4
+        )
+        self.scheduler = optim.lr_scheduler.MultiStepLR(
+            self.optimizer, milestones=[150, 250, 350], gamma=0.1
+        )
+        if torch.cuda.is_available():
+            self.criterion.cuda()
+
+    def train_single_epoch(self, epoch_idx):
+        """
+        Ensure to update self.train_losses & self.train_accuracy
+        :param epoch_idx: Index of the epoch
+        :param train_loader: dataloader object for the training dataset
+        :return: None
+        """
+        train_loss = 0.0
+        total = 0
+        correct = 0
+
+        start_time = time.time()
+
+        self.model.train()
+        for i, data in enumerate(self.train_loader, 0):
+            # get the inputs; data is a list of [inputs, labels]
+            inputs, labels = data
+            device = get_device()
+            inputs, labels = inputs.to(device), labels.to(device)
+
+            # zero the parameter gradients
+            self.optimizer.zero_grad()
+
+            # forward + backward + optimize
+            outputs = self.model(inputs)
+            loss = self.calc_loss(outputs, labels)
+            loss.backward()
+            self.optimizer.step()
+            train_loss += loss.item()
+            total += labels.size(0)
+
+            correct += self.num_correct_preds(outputs, labels)
+
+        epoch_loss = train_loss / len(self.train_loader)
+        epoch_accuracy = correct * 100 / total
+
+        elapsed = time.time() - start_time
+        print(
+            f"Training: Epoch {epoch_idx} || Loss: {epoch_loss:7.3f} || Accuracy: {epoch_accuracy:6.2f}% || Time: {elapsed:6.2f}"
+        )
+
+        self.train_losses.append(epoch_loss)
+        self.train_accuracy.append(epoch_accuracy)
+
+    def num_correct_preds(self, outputs, labels):
+        _, predicted = outputs.max(1)
+        return predicted.eq(labels).sum().item()
+
+    def calc_loss(self, outputs, labels):
+        return self.criterion(outputs, labels)
+
+    def validate_single_epoch(self, epoch_idx):
+        """
+        Ensure to update self.test_losses & self.test_accuracy
+        :param epoch_idx: Index of the epoch
+        :param test_loader: dataloader object for the test dataset
+        :return: None
+        """
+        test_loss = 0.0
+        total = 0
+        correct = 0
+
+        self.model.eval()
+        with torch.no_grad():
+            for i, data in enumerate(self.test_loader, 0):
+                inputs, labels = data
+                device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+                inputs, labels = inputs.to(device), labels.to(device)
+
+                outputs = self.model(inputs)
+                loss = self.calc_loss(outputs, labels)
+                test_loss += loss.item()
+
+                total += labels.size(0)
+                correct += self.num_correct_preds(outputs, labels)
+
+        epoch_loss = test_loss / len(self.test_loader)
+        epoch_accuracy = correct * 100 / total
+
+        state = {
+            "net": self.model.state_dict(),
+            "acc": epoch_accuracy,
+            "epoch": epoch_idx,
+            "loss": epoch_loss,
+        }
+        if self.best_accuracy < epoch_accuracy:
+            self.best_accuracy = epoch_accuracy
+            print(
+                f"Saving model with acc: {epoch_accuracy:7.3f}, loss: {epoch_loss:6.2f}, epoch: {epoch_idx}"
+            )
+            torch.save(
+                state,
+                os.path.join(self.checkpoints_path, "cifar10_base_best_acc.pth"),
+            )
+
+        if self.min_loss > epoch_loss:
+            self.min_loss = epoch_loss
+            print(
+                f"Saving model with acc: {epoch_accuracy:7.3f}, loss: {epoch_loss:6.2f}, epoch: {epoch_idx}"
+            )
+            torch.save(
+                state,
+                os.path.join(self.checkpoints_path, "cifar10_base_best_loss.pth"),
+            )
+        self.test_losses.append(epoch_loss)
+        self.test_accuracy.append(epoch_accuracy)
+
+    def train_model(self):
+
+        print("Started Training")
+
+        for epoch in range(self.epochs):
+            self.train_single_epoch(epoch)
+            self.validate_single_epoch(epoch)
+            self.scheduler.step()
+
+        print("Finished Training")
+
+        print("Training Loss: ", self.train_losses)
+        print("Training Accuracy: ", self.train_accuracy)
+        print("Test Loss: ", self.test_losses)
+        print("Test Accuracy: ", self.test_accuracy)
+
+        self.export_plots()
+        self.export_data()
+
+    def export_data(self):
+
+        filename = os.path.join(
+            self.root_path, self.project_path, self.variant_name, "raw_data"
+        )
+
+        print(f"Saving data at {filename}")
+
+        with open(filename, "w") as f:
+            f.write("Train Loss: " + str(self.train_losses) + "\n")
+            f.write("Train Acc: " + str(self.train_accuracy) + "\n")
+            f.write("Test Loss: " + str(self.test_losses) + "\n")
+            f.write("Test Acc: " + str(self.test_accuracy) + "\n")
+
+    def export_plots(self):
+
+        print(f"Saving plots at {self.plots_path}")
+
+        train_losses_fig = plt.figure()
+        plt.plot(self.train_losses)
+        plt.xlabel("Epochs")
+        plt.ylabel("Train Loss")
+        train_losses_fig.savefig(os.path.join(self.plots_path, "train_loss.png"))
+
+        test_losses_fig = plt.figure()
+        plt.plot(self.test_losses)
+        plt.xlabel("Epochs")
+        plt.ylabel("Test Loss")
+        test_losses_fig.savefig(os.path.join(self.plots_path, "test_loss.png"))
+
+        train_acc_fig = plt.figure()
+        plt.plot(self.train_accuracy)
+        plt.xlabel("Epochs")
+        plt.ylabel("Train Acc")
+        train_acc_fig.savefig(os.path.join(self.plots_path, "train_acc.png"))
+
+        test_acc_fig = plt.figure()
+        plt.plot(self.test_accuracy)
+        plt.xlabel("Epochs")
+        plt.ylabel("Test Acc")
+        test_acc_fig.savefig(os.path.join(self.plots_path, "test_acc.png"))
+
+
+# Utils
+
+
+def make_dirs(path: str):
+    """ Why is this not how the standard library works? """
+    path = os.path.split(path)[0]
+    if path != "":
+        os.makedirs(path, exist_ok=True)
+
+
+def get_device():
+    return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
