@@ -153,6 +153,35 @@ class Base:
     def calc_loss(self, outputs, labels):
         return self.criterion(outputs, labels)
 
+    def eval_acc(self):
+        """ Returns the per-class accuracy evaluated on the validation set. """
+        self.model.eval()
+
+        totals  = [0] * len(self.class_names)
+        correct = [0] * len(self.class_names)
+
+        with torch.no_grad():
+            for inputs, labels in self.test_loader:
+                device = get_device()
+                inputs, labels = inputs.to(device), labels.to(device)
+
+                outputs = self.model(inputs)
+
+                for idx, _class in enumerate(self.class_names):
+                    is_class = (labels == idx)
+
+                    cur_labels  = labels[is_class]
+                    if cur_labels.shape[0] == 0:
+                        continue
+
+                    cur_outputs = outputs[is_class]
+
+                    totals[idx] += cur_labels.size(0)
+                    correct[idx] += self.num_correct_preds(cur_outputs, cur_labels)
+
+        return [c * 100 / t for c, t in zip(correct, totals)]
+
+
     def validate_single_epoch(self, epoch_idx):
         """
         Ensure to update self.test_losses & self.test_accuracy
@@ -168,7 +197,7 @@ class Base:
         with torch.no_grad():
             for i, data in enumerate(self.test_loader, 0):
                 inputs, labels = data
-                device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+                device = get_device()
                 inputs, labels = inputs.to(device), labels.to(device)
 
                 outputs = self.model(inputs)
