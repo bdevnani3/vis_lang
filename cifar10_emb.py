@@ -6,12 +6,17 @@ import torch.nn as nn
 from base import get_device
 from cifar10 import Cifar10
 
+import os
+
 
 class Cifar10Emb(Cifar10):
     def __init__(self, root_path, variant_name="cifar10_emb", epochs=200):
-        super(Cifar10Emb, self).__init__(
+        super().__init__(
             root_path=root_path, variant_name=variant_name, epochs=epochs
         )
+
+        # We only need to lazily initialize this once. Don't reinitialize it if it's already been initialized.
+        self.word_vectors = gensim.downloader.load(name="word2vec-google-news-300")
 
     def find_closest_words(
         self, word_lookup: torch.Tensor, x: torch.Tensor, mode: str = "l2"
@@ -22,7 +27,7 @@ class Cifar10Emb(Cifar10):
 
         Modes:
             l2     - Computes pairwise L2 distance and chooses the lowest one.
-            cossim - Computs pairwise cosine similarity, and chooses the most similar. (Not implemented)
+            cossim - Computes pairwise cosine similarity, and chooses the most similar. (Not implemented)
         """
         N, c = word_lookup.shape
         M, c2 = x.shape
@@ -41,15 +46,13 @@ class Cifar10Emb(Cifar10):
             raise NotImplementedError
 
     def init_word_lookup(self):
-        # We only need to lazily initialize this once. Don't reinitialize it if it's already been initialized.
-        word_vectors = gensim.downloader.load(name="word2vec-google-news-300")
 
-        # Note: we store the word lookup in the model, not the datset because
+        # Note: we store the word lookup in the model, not the dataset because
         #   1.) The word lookup should be on the same device as the model
         #   2.) If using multiple GPUs, the model will get duplicated to each device, but the dataset won't
         #   3.) The word model (i.e., textual feature encoder) is a property of the model not the dataset
         self.model.word_lookup = torch.from_numpy(
-            np.stack([word_vectors[_class] for _class in self.class_names])
+            np.stack([self.word_vectors[_class] for _class in self.class_names])
         ).to(get_device())
 
     def num_correct_preds(self, outputs, labels):
@@ -65,10 +68,15 @@ class Cifar10Emb(Cifar10):
 
 if __name__ == "__main__":
 
-    root_path = "/nethome/bdevnani3/raid"
+    if os.path.exists("/nethome/bdevnani3/raid"):
+        root_path = "/nethome/bdevnani3/raid"
+    else:
+        root_path = "."
+
     variant = Cifar10Emb(root_path=root_path)
 
-    variant.load_data()
+    variant.init_datasets()
+    variant.init_dataloaders()
     variant.set_up_model_architecture(300)
     variant.init_model_helpers(nn.MSELoss)
     variant.init_word_lookup()

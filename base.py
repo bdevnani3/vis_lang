@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader
 
 import models
 
@@ -35,13 +36,22 @@ class Base:
         )
         make_dirs(self.plots_path)
 
+        self.dataset_args = {
+            "root": os.path.join(self.root_path, "data"),
+            "download": True,
+        }
+        self.dataloader_args = {"batch_size": 32, "shuffle": True, "num_workers": 2}
+
         self.class_names = None
+        self.train_dataset = None
+        self.test_dataset = None
         self.train_loader = None
         self.test_loader = None
         self.model = None
         self.criterion = None
         self.optimizer = None
         self.scheduler = None
+
         self.train_losses = []
         self.train_accuracy = []
         self.test_losses = []
@@ -54,11 +64,18 @@ class Base:
             self.root_path, project_path, self.variant_name, "logs.txt"
         )
 
-    def load_data(self):
+    def init_datasets(self):
+        """
+        Populate self.train_dataset and self.test_dataset
+        """
+        NotImplementedError
+
+    def init_dataloaders(self):
         """
         Populate self.train_loader and self.test_loader with desired datasets.
         """
-        NotImplementedError
+        self.train_loader = DataLoader(self.train_dataset, **self.dataloader_args)
+        self.test_loader = DataLoader(self.test_dataset, **self.dataloader_args)
 
     def set_up_model_architecture(self, num_features_in_last_layer: int):
         """
@@ -170,24 +187,23 @@ class Base:
             "epoch": epoch_idx,
             "loss": epoch_loss,
         }
+        print(
+            f"Testing : Epoch {epoch_idx} || Loss: {epoch_loss:7.3f} || Accuracy: {epoch_accuracy:6.2f}%"
+        )
         if self.best_accuracy < epoch_accuracy:
             self.best_accuracy = epoch_accuracy
-            print(
-                f"Saving model with acc: {epoch_accuracy:7.3f}, loss: {epoch_loss:6.2f}, epoch: {epoch_idx}"
-            )
+            print(f"Saving model as it has best ACCURACY so far.")
             torch.save(
                 state,
-                os.path.join(self.checkpoints_path, "cifar10_base_best_acc.pth"),
+                os.path.join(self.checkpoints_path, f"best_acc.pth"),
             )
 
         if self.min_loss > epoch_loss:
             self.min_loss = epoch_loss
-            print(
-                f"Saving model with acc: {epoch_accuracy:7.3f}, loss: {epoch_loss:6.2f}, epoch: {epoch_idx}"
-            )
+            print(f"Saving model as it has best LOSS so far.")
             torch.save(
                 state,
-                os.path.join(self.checkpoints_path, "cifar10_base_best_loss.pth"),
+                os.path.join(self.checkpoints_path, "best_loss.pth"),
             )
         self.test_losses.append(epoch_loss)
         self.test_accuracy.append(epoch_accuracy)
@@ -200,6 +216,7 @@ class Base:
             self.train_single_epoch(epoch)
             self.validate_single_epoch(epoch)
             self.scheduler.step()
+            print()
 
         print("Finished Training")
 
@@ -229,28 +246,34 @@ class Base:
 
         print(f"Saving plots at {self.plots_path}")
 
+        # TODO: Clean up redundancy
+
         train_losses_fig = plt.figure()
         plt.plot(self.train_losses)
         plt.xlabel("Epochs")
         plt.ylabel("Train Loss")
+        plt.title(self.variant_name)
         train_losses_fig.savefig(os.path.join(self.plots_path, "train_loss.png"))
 
         test_losses_fig = plt.figure()
         plt.plot(self.test_losses)
         plt.xlabel("Epochs")
         plt.ylabel("Test Loss")
+        plt.title(self.variant_name)
         test_losses_fig.savefig(os.path.join(self.plots_path, "test_loss.png"))
 
         train_acc_fig = plt.figure()
         plt.plot(self.train_accuracy)
         plt.xlabel("Epochs")
         plt.ylabel("Train Acc")
+        plt.title(self.variant_name)
         train_acc_fig.savefig(os.path.join(self.plots_path, "train_acc.png"))
 
         test_acc_fig = plt.figure()
         plt.plot(self.test_accuracy)
         plt.xlabel("Epochs")
         plt.ylabel("Test Acc")
+        plt.title(self.variant_name)
         test_acc_fig.savefig(os.path.join(self.plots_path, "test_acc.png"))
 
 
