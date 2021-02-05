@@ -1,4 +1,3 @@
-
 import numpy as np
 import torch.nn as nn
 from torch.utils.data import Subset
@@ -13,7 +12,10 @@ import os
 class Cifar100Emb(Cifar10EmbRemoveClasses, Cifar100):
     def __init__(self, root_path, variant_name="cifar100_emb", epochs=200):
         super().__init__(
-            root_path=root_path, variant_name=variant_name, epochs=epochs, classes_to_remove=[]
+            root_path=root_path,
+            variant_name=variant_name,
+            epochs=epochs,
+            classes_to_remove=[],
         )
 
     def init_datasets(self):

@@ -11,9 +11,7 @@ import os
 
 class Cifar10Emb(Cifar10):
     def __init__(self, root_path, variant_name="cifar10_emb", epochs=200):
-        super().__init__(
-            root_path=root_path, variant_name=variant_name, epochs=epochs
-        )
+        super().__init__(root_path=root_path, variant_name=variant_name, epochs=epochs)
 
         # We only need to lazily initialize this once. Don't reinitialize it if it's already been initialized.
         self.word_vectors = gensim.downloader.load(name="word2vec-google-news-300")

@@ -10,9 +10,7 @@ from base import Base
 
 class Cifar100(Base):
     def __init__(self, root_path, variant_name="cifar100_base", epochs=200):
-        super().__init__(
-            root_path=root_path, variant_name=variant_name, epochs=epochs
-        )
+        super().__init__(root_path=root_path, variant_name=variant_name, epochs=epochs)
 
     def init_datasets(self):
 
@@ -21,7 +19,9 @@ class Cifar100(Base):
                 transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize((0.5071, 0.4865, 0.4409), (0.2673, 0.2564, 0.2762)),
+                transforms.Normalize(
+                    (0.5071, 0.4865, 0.4409), (0.2673, 0.2564, 0.2762)
+                ),
             ]
         )
         transform_test = transforms.Compose(
