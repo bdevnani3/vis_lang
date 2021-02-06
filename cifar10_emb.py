@@ -5,8 +5,7 @@ import torch.nn as nn
 
 from base import get_device
 from cifar10 import Cifar10
-
-import os
+from utils import init_root
 
 
 class Cifar10Emb(Cifar10):
@@ -66,11 +65,7 @@ class Cifar10Emb(Cifar10):
 
 if __name__ == "__main__":
 
-    if os.path.exists("/nethome/bdevnani3/raid"):
-        root_path = "/nethome/bdevnani3/raid"
-    else:
-        root_path = "."
-
+    root_path = init_root()
     variant = Cifar10Emb(root_path=root_path)
 
     variant.init_datasets()

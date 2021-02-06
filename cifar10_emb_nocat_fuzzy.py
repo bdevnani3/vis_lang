@@ -2,9 +2,8 @@ from cifar10_emb import Cifar10Emb
 from torch.utils.data import Subset
 import numpy as np
 import torch.nn as nn
-import torch
 
-import os
+from utils import init_root
 
 
 class Cifar10EmbRemoveClasses(Cifar10Emb):
@@ -49,33 +48,27 @@ class Cifar10EmbRemoveClasses(Cifar10Emb):
 
         self.train_dataset = new_datasets[0]
         self.test_dataset = new_datasets[1]
-        
+
     def calc_loss(self, outputs, labels):
         # Shape: batch_size x 300
 
         correct_embeddings = self.model.word_lookup[labels]
         mse = self.criterion(outputs, correct_embeddings)
 
-        is_correct = (self.find_closest_words(self.model.word_lookup, outputs) == labels)
+        is_correct = self.find_closest_words(self.model.word_lookup, outputs) == labels
 
         return (mse * ~is_correct[:, None]).mean()
-        
-        
 
 
 if __name__ == "__main__":
 
-    if os.path.exists("/nethome/bdevnani3/raid"):
-        root_path = "/nethome/bdevnani3/raid"
-    else:
-        root_path = "."
-
+    root_path = init_root()
     variant = Cifar10EmbRemoveClasses(root_path=root_path, classes_to_remove=["cat"])
 
     variant.init_datasets()
     variant.remove_classes()
     variant.init_dataloaders()
     variant.set_up_model_architecture(300)
-    variant.init_model_helpers(lambda: nn.MSELoss(reduction='none'))
+    variant.init_model_helpers(lambda: nn.MSELoss(reduction="none"))
     variant.init_word_lookup()
     variant.train_model()

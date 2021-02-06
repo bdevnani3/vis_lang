@@ -6,9 +6,11 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 import models
+from utils import get_device, make_dirs
 
 import os
 import time
+import json
 
 
 class Base:
@@ -157,7 +159,7 @@ class Base:
         """ Returns the per-class accuracy evaluated on the validation set. """
         self.model.eval()
 
-        totals  = [0] * len(self.class_names)
+        totals = [0] * len(self.class_names)
         correct = [0] * len(self.class_names)
 
         with torch.no_grad():
@@ -168,9 +170,9 @@ class Base:
                 outputs = self.model(inputs)
 
                 for idx, _class in enumerate(self.class_names):
-                    is_class = (labels == idx)
+                    is_class = labels == idx
 
-                    cur_labels  = labels[is_class]
+                    cur_labels = labels[is_class]
                     if cur_labels.shape[0] == 0:
                         continue
 
@@ -180,7 +182,6 @@ class Base:
                     correct[idx] += self.num_correct_preds(cur_outputs, cur_labels)
 
         return [c * 100 / t for c, t in zip(correct, totals)]
-
 
     def validate_single_epoch(self, epoch_idx):
         """
@@ -265,11 +266,17 @@ class Base:
 
         print(f"Saving data at {filename}")
 
+        data = {
+            "Train Loss": self.train_losses,
+            "Train Acc": self.train_accuracy,
+            "Test Loss": self.test_losses,
+            "Test Acc": self.test_accuracy,
+            "Best Train Acc": max(self.train_accuracy),
+            "Best Test Acc": max(self.test_accuracy),
+        }
+
         with open(filename, "w") as f:
-            f.write("Train Loss: " + str(self.train_losses) + "\n")
-            f.write("Train Acc: " + str(self.train_accuracy) + "\n")
-            f.write("Test Loss: " + str(self.test_losses) + "\n")
-            f.write("Test Acc: " + str(self.test_accuracy) + "\n")
+            json.dump(data, f)
 
     def export_plots(self):
 
@@ -304,17 +311,3 @@ class Base:
         plt.ylabel("Test Acc")
         plt.title(self.variant_name)
         test_acc_fig.savefig(os.path.join(self.plots_path, "test_acc.png"))
-
-
-# Utils
-
-
-def make_dirs(path: str):
-    """ Why is this not how the standard library works? """
-    path = os.path.split(path)[0]
-    if path != "":
-        os.makedirs(path, exist_ok=True)
-
-
-def get_device():
-    return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

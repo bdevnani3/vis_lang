@@ -1,12 +1,8 @@
-import numpy as np
 import torch.nn as nn
-from torch.utils.data import Subset
-
 
 from cifar10_emb_removeclasses import Cifar10EmbRemoveClasses
 from cifar100 import Cifar100
-
-import os
+from utils import init_root
 
 
 class Cifar100Emb(Cifar10EmbRemoveClasses, Cifar100):
@@ -29,11 +25,7 @@ class Cifar100Emb(Cifar10EmbRemoveClasses, Cifar100):
 
 if __name__ == "__main__":
 
-    if os.path.exists("/nethome/bdevnani3/raid"):
-        root_path = "/nethome/bdevnani3/raid"
-    else:
-        root_path = "."
-
+    root_path = init_root()
     variant = Cifar100Emb(root_path=root_path, epochs=300)
 
     variant.init_datasets()

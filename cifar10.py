@@ -1,9 +1,8 @@
-import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 from torchvision import datasets
-from torch.utils.data import DataLoader
 
+from utils import init_root
 import os
 
 from base import Base
@@ -51,13 +50,8 @@ class Cifar10(Base):
 
 if __name__ == "__main__":
 
-    if os.path.exists("/nethome/bdevnani3/raid"):
-        root_path = "/nethome/bdevnani3/raid"
-    else:
-        root_path = "."
-
+    root_path = init_root()
     cifar10 = Cifar10(root_path=root_path)
-
     cifar10.init_datasets()
     cifar10.init_dataloaders()
     cifar10.set_up_model_architecture(10)
