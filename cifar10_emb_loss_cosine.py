@@ -29,17 +29,11 @@ class Cifar10EmbLossCosine(Cifar10EmbRemoveClasses):
 if __name__ == "__main__":
 
     root_path = init_root()
-    print("Starting")
     variant = Cifar10EmbLossCosine(root_path=root_path)
-    print("Done")
     variant.init_datasets()
-    print("Done")
     variant.init_dataloaders()
-    print("Done")
     variant.set_up_model_architecture(300)
-    print("Done")
     variant.init_model_helpers(nn.CosineSimilarity)
-    print("Done")
 
     variant.init_word_lookup()
     variant.train_model()
