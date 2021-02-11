@@ -45,7 +45,9 @@ class Cifar10Emb(Cifar10):
         elif mode == "cossim":
             # Note: we don't need to divide by the length of x here, because it's the same for the argmax.
             # Also, it's imporant that we can get away with that for numerical stability.
-            return ((x @ word_lookup.t()) / word_lookup.norm(dim=-1)[None, :]).argmax(dim=-1)
+            return ((x @ word_lookup.t()) / word_lookup.norm(dim=-1)[None, :]).argmax(
+                dim=-1
+            )
         elif mode == "dot":
             return (x @ word_lookup.t()).argmax(dim=-1)
         else:
@@ -63,7 +65,12 @@ class Cifar10Emb(Cifar10):
 
     def num_correct_preds(self, outputs, labels):
         return (
-            (self.find_closest_words(self.model.word_lookup, outputs, mode=self.similarity_mode) == labels)
+            (
+                self.find_closest_words(
+                    self.model.word_lookup, outputs, mode=self.similarity_mode
+                )
+                == labels
+            )
             .sum()
             .item()
         )

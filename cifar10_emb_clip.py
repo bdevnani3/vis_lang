@@ -15,7 +15,7 @@ class Cifar10EmbClip(Cifar10Emb):
         # The similarity mode to pass into find_closest_words
         self.similarity_mode = "cossim"
 
-    def set_up_model_architecture(self, num_features_in_last_layer:int):
+    def set_up_model_architecture(self, num_features_in_last_layer: int):
         super().set_up_model_architecture(num_features_in_last_layer)
 
         # CLIP has this so we do too
@@ -24,14 +24,16 @@ class Cifar10EmbClip(Cifar10Emb):
     def init_word_lookup(self):
         super().init_word_lookup()
 
-        self.model.word_lookup = self.model.word_lookup / self.model.word_lookup.norm(dim=-1, keepdim=True)
+        self.model.word_lookup = self.model.word_lookup / self.model.word_lookup.norm(
+            dim=-1, keepdim=True
+        )
 
     def calc_loss(self, outputs, labels):
         """ Most of this is copied line-for-line from https://github.com/openai/CLIP/blob/main/clip/model.py#L353 """
-        
+
         image_features = outputs
-        text_features  = self.model.word_lookup
-        
+        text_features = self.model.word_lookup
+
         # normalized features
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
 
