@@ -22,8 +22,8 @@ class Cifar10EmbLossDot(Cifar10EmbRemoveClasses):
         self.similarity_mode = "dot"
 
     def calc_loss(self, outputs, labels):
-        loss = torch.mean(self.criterion(outputs, self.model.word_lookup[labels]))
-        return torch.norm(outputs) * torch.norm(labels) * (1.0 - loss)
+        outputs = outputs / outputs.norm(dim=-1, keepdim=True)
+        return -(outputs * self.model.word_lookup[labels]).sum(-1).mean()
 
 
 if __name__ == "__main__":
