@@ -33,6 +33,7 @@ def plot(axis, models):
 	plt.legend()
 	plt.show()
 
+
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
 		print('Usage: python plot.py <name_of_axis> <model1> <model2> ...')
