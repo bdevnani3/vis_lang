@@ -12,7 +12,9 @@ class Cifar10Emb(Cifar10):
     def __init__(self, root_path, variant_name="cifar10_emb", epochs=200):
         super().__init__(root_path=root_path, variant_name=variant_name, epochs=epochs)
 
-        # We only need to lazily initialize this once. Don't reinitialize it if it's already been initialized.
+        # The similarity mode to pass into find_closest_words
+        self.similarity_mode = "l2"
+
         self.word_vectors = gensim.downloader.load(name="word2vec-google-news-300")
 
     def find_closest_words(
@@ -24,7 +26,8 @@ class Cifar10Emb(Cifar10):
 
         Modes:
             l2     - Computes pairwise L2 distance and chooses the lowest one.
-            cossim - Computes pairwise cosine similarity, and chooses the most similar. (Not implemented)
+            cossim - Computes pairwise cosine similarity, and chooses the most similar.
+            dot    - Computes pairwise dot product similarity, and choses the most similar
         """
         N, c = word_lookup.shape
         M, c2 = x.shape
@@ -39,6 +42,12 @@ class Cifar10Emb(Cifar10):
                 .sum(dim=-1)
                 .argmin(dim=-1)
             )
+        elif mode == "cossim":
+            # Note: we don't need to divide by the length of x here, because it's the same for the argmax.
+            # Also, it's imporant that we can get away with that for numerical stability.
+            return ((x @ word_lookup.t()) / word_lookup.norm(dim=-1)[None, :]).argmax(dim=-1)
+        elif mode == "dot":
+            return (x @ word_lookup.t()).argmax(dim=-1)
         else:
             raise NotImplementedError
 
@@ -54,7 +63,7 @@ class Cifar10Emb(Cifar10):
 
     def num_correct_preds(self, outputs, labels):
         return (
-            (self.find_closest_words(self.model.word_lookup, outputs) == labels)
+            (self.find_closest_words(self.model.word_lookup, outputs, mode=self.similarity_mode) == labels)
             .sum()
             .item()
         )
