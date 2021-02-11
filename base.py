@@ -93,7 +93,7 @@ class Base:
         if torch.cuda.is_available():
             self.model.cuda()
 
-    def init_model_helpers(self, criterion=nn.MSELoss):
+    def init_model_helpers(self, criterion):
         self.criterion = criterion()
         self.optimizer = optim.SGD(
             self.model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4

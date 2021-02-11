@@ -27,7 +27,7 @@ class Cifar10Emb(Cifar10):
         Modes:
             l2     - Computes pairwise L2 distance and chooses the lowest one.
             cossim - Computes pairwise cosine similarity, and chooses the most similar.
-            dot    - Computes pairwise dot product similarity, and chooses the most similar
+            dot    - Computes pairwise dot product similarity, and choses the most similar
         """
         N, c = word_lookup.shape
         M, c2 = x.shape
@@ -44,7 +44,7 @@ class Cifar10Emb(Cifar10):
             )
         elif mode == "cossim":
             # Note: we don't need to divide by the length of x here, because it's the same for the argmax.
-            # Also, it's important that we can get away with that for numerical stability.
+            # Also, it's imporant that we can get away with that for numerical stability.
             return ((x @ word_lookup.t()) / word_lookup.norm(dim=-1)[None, :]).argmax(dim=-1)
         elif mode == "dot":
             return (x @ word_lookup.t()).argmax(dim=-1)
