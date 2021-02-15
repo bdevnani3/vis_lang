@@ -239,11 +239,11 @@ class Base:
 
         if self.min_loss > epoch_loss:
             self.min_loss = epoch_loss
-            print(f"Saving model as it has best LOSS so far.")
-            torch.save(
-                state,
-                os.path.join(self.checkpoints_path, "best_loss.pth"),
-            )
+            # print(f"Saving model as it has best LOSS so far.")
+            # torch.save(
+            #     state,
+            #     os.path.join(self.checkpoints_path, "best_loss.pth"),
+            # )
         self.test_losses.append(epoch_loss)
         self.test_accuracy.append(epoch_accuracy)
 
