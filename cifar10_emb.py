@@ -15,8 +15,6 @@ class Cifar10Emb(Cifar10):
         # The similarity mode to pass into find_closest_words
         self.similarity_mode = "l2"
 
-        self.word_vectors = gensim.downloader.load(name="word2vec-google-news-300")
-
     def find_closest_words(
         self, word_lookup: torch.Tensor, x: torch.Tensor, mode: str = "l2"
     ) -> torch.Tensor:
@@ -53,6 +51,9 @@ class Cifar10Emb(Cifar10):
         else:
             raise NotImplementedError
 
+    def init_word_vectors(self):
+        self.word_vectors = gensim.downloader.load(name="word2vec-google-news-300")
+
     def init_word_lookup(self):
 
         # Note: we store the word lookup in the model, not the dataset because
@@ -84,6 +85,7 @@ if __name__ == "__main__":
     root_path = init_root()
     variant = Cifar10Emb(root_path=root_path)
 
+    variant.init_word_vectors()
     variant.init_datasets()
     variant.init_dataloaders()
     variant.set_up_model_architecture(300)

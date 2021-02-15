@@ -22,6 +22,7 @@ if __name__ == "__main__":
     variant = Cifar100EmbRemoveClasses(
         root_path=root_path, epochs=300, classes_to_remove=["camel"]
     )
+    variant.init_word_vectors()
     variant.init_datasets()
     variant.remove_classes()
     variant.init_dataloaders()

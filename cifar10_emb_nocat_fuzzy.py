@@ -65,6 +65,7 @@ if __name__ == "__main__":
     root_path = init_root()
     variant = Cifar10EmbRemoveClasses(root_path=root_path, classes_to_remove=["cat"])
 
+    variant.init_word_vectors()
     variant.init_datasets()
     variant.remove_classes()
     variant.init_dataloaders()

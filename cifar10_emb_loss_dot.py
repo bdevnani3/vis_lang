@@ -30,6 +30,7 @@ if __name__ == "__main__":
 
     root_path = init_root()
     variant = Cifar10EmbLossDot(root_path=root_path)
+    variant.init_word_vectors()
     variant.init_datasets()
     variant.init_dataloaders()
     variant.set_up_model_architecture(300)

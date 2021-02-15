@@ -28,6 +28,7 @@ if __name__ == "__main__":
     root_path = init_root()
     variant = Cifar100Emb(root_path=root_path, epochs=300)
 
+    variant.init_word_vectors()
     variant.init_datasets()
     variant.remove_classes()
     variant.init_dataloaders()
