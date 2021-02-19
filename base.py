@@ -103,15 +103,14 @@ class Base:
         )
         if torch.cuda.is_available():
             self.criterion.cuda()
-    
+
     def load_best(self):
         """
         Loads the best accuracy model checkpoint into self.model.
         """
         path = os.path.join(self.checkpoints_path, f"best_acc.pth")
 
-        self.model.load_state_dict(torch.load(path)['net'])
-
+        self.model.load_state_dict(torch.load(path)["net"])
 
     def train_single_epoch(self, epoch_idx):
         """
@@ -231,7 +230,7 @@ class Base:
         )
         if self.best_accuracy < epoch_accuracy:
             self.best_accuracy = epoch_accuracy
-            print(f"Saving model as it has best ACCURACY so far.")
+            print(f"Saving model as it has best accuracy so far.")
             torch.save(
                 state,
                 os.path.join(self.checkpoints_path, f"best_acc.pth"),

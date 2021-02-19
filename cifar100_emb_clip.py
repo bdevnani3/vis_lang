@@ -28,7 +28,9 @@ class Cifar100EmbClip(Cifar100Emb):
     def init_word_lookup(self):
         super().init_word_lookup()
 
-        self.model.word_lookup = self.model.word_lookup / (self.model.word_lookup.norm(dim=-1, keepdim=True) + 0.000001)
+        self.model.word_lookup = self.model.word_lookup / (
+            self.model.word_lookup.norm(dim=-1, keepdim=True) + 0.000001
+        )
 
     def calc_loss(self, outputs, labels):
         """ Most of this is copied line-for-line from https://github.com/openai/CLIP/blob/main/clip/model.py#L353 """
