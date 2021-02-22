@@ -8,7 +8,8 @@ def make_dirs(path: str):
     """ Why is this not how the standard library works? """
     path = os.path.split(path)[0]
     if path != "":
-        os.makedirs(path, exist_ok=True)
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
 
 
 def get_device():

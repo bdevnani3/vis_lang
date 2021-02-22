@@ -6,7 +6,7 @@ from utils import init_root
 
 
 class Cifar100EmbBert(Cifar10EmbBert, Cifar100):
-    def __init__(self, root_path, variant_name="cifar100_emb_bert", epochs=200):
+    def __init__(self, root_path, variant_name="cifar100_emb_bert_clip", epochs=200):
         super().__init__(root_path=root_path, variant_name=variant_name, epochs=epochs)
 
     def init_datasets(self):
@@ -22,6 +22,6 @@ if __name__ == "__main__":
     variant.init_datasets()
     variant.init_dataloaders()
     variant.set_up_model_architecture(768)
-    variant.init_model_helpers(nn.MSELoss)
+    variant.init_model_helpers(nn.CrossEntropyLoss)
     variant.init_word_lookup()
     variant.train_model()

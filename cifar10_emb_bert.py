@@ -4,12 +4,12 @@ import numpy as np
 import torch.nn as nn
 
 from base import get_device
-from cifar10_emb import Cifar10Emb
+from cifar10_emb_clip import Cifar10EmbClip
 from utils import init_root
 
 
-class Cifar10EmbBert(Cifar10Emb):
-    def __init__(self, root_path, variant_name="cifar10_emb_bert", epochs=200):
+class Cifar10EmbBert(Cifar10EmbClip):
+    def __init__(self, root_path, variant_name="cifar10_emb_bert_clip", epochs=200):
         super().__init__(root_path=root_path, variant_name=variant_name, epochs=epochs)
 
         # The similarity mode to pass into find_closest_words
@@ -26,6 +26,9 @@ class Cifar10EmbBert(Cifar10Emb):
         self.model.word_lookup = torch.from_numpy(np.stack(word_vectors)).to(
             get_device()
         )
+        self.model.word_lookup = self.model.word_lookup / self.model.word_lookup.norm(
+            dim=-1, keepdim=True
+        )
 
 
 if __name__ == "__main__":
@@ -37,6 +40,6 @@ if __name__ == "__main__":
     variant.init_datasets()
     variant.init_dataloaders()
     variant.set_up_model_architecture(768)
-    variant.init_model_helpers(nn.MSELoss)
+    variant.init_model_helpers(nn.CrossEntropyLoss)
     variant.init_word_lookup()
     variant.train_model()
