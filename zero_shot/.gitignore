@@ -1,0 +1,7 @@
+data/
+trained_models/
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+vis_lang/

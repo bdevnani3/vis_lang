@@ -1,0 +1,19 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
+num_runs: 1
+data: "cifar100"
+model: "alexnet"
+output: ""
+expt: True # If set to true, it will do an experimental run as opposed to a full run
+
+ntasks: 20
+
+batch_size: 64
+nepochs: 50
+pc_valid: 0.15
+
+workers: 4
+device: "cuda"
