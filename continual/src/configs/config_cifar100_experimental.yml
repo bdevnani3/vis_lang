@@ -8,6 +8,7 @@ data: "cifar100"
 model: "alexnet"
 output: ""
 expt: True # If set to true, it will do an experimental run as opposed to a full run
+learning_type: "task" # or class
 
 ntasks: 20
 

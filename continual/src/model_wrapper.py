@@ -194,7 +194,7 @@ class Base:
     def train_model(self, task_id, data_loader):
 
         print("Started Training")
-
+        self.model.train()
         for epoch in range(self.epochs):
             self.train_single_epoch(epoch, task_id, data_loader["train"])
             self.validate_single_epoch(epoch, task_id, data_loader["train"])
@@ -210,20 +210,25 @@ class Base:
 
         self.export_data(task_id)
 
-    def test_model(self, task_id, data_loader):
+    def test_model(self, task_id, data_loader, learning_type, task_labels=None):
         test_loss = 0.0
         total = 0
         correct = 0
 
         self.model.eval()
 
-        def num_correct_preds_test(outputs, labels):
-            val, predicted = outputs.max(1)
+        def num_correct_preds_task(outputs, labels):
+            z = torch.zeros_like(outputs)
+            z[:, task_labels] = 1
+            z = outputs * z
+            z[z == 0] = -np.inf
+            val, predicted = z.max(1)
             return predicted.eq(labels).sum().item()
 
         with torch.no_grad():
             for i, data in enumerate(data_loader):
                 inputs, labels = data
+
                 device = get_device()
                 inputs, labels = inputs.to(device), labels.to(device)
 
@@ -232,7 +237,11 @@ class Base:
                 test_loss += loss.item()
 
                 total += labels.size(0)
-                correct += self.num_correct_preds(outputs, labels)
+
+                if learning_type == "task":
+                    correct += num_correct_preds_task(outputs, labels)
+                else:
+                    correct += self.num_correct_preds(outputs, labels)
 
         epoch_loss = test_loss / len(data_loader)
         epoch_accuracy = correct * 100 / total

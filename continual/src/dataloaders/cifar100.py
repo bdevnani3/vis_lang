@@ -254,6 +254,7 @@ class DatasetGen(object):
         self.dataloaders[task_id]["name"] = "CIFAR100-{}-{}".format(
             task_id, self.task_ids[task_id]
         )
+        self.dataloaders[task_id]["task_labels"] = self.task_ids[task_id]
         self.dataloaders[task_id]["train_labels"] = self.train_set[task_id].train_labels
         self.dataloaders[task_id]["test_labels"] = self.test_set[task_id].test_labels
 

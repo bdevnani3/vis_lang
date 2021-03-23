@@ -61,11 +61,11 @@ def run(args, run_id):
         print(f"Model: {model} not found.")
         return
 
-    checkpoint = f"{args.data_dir}/continual/{args.data}_{args.model}/models/"
-
+    checkpoint = f"{args.data_dir}/continual/{args.data}_{args.model}2/models/"
+    epochs = 50
     if args.expt == True:
         # Set any other params for expt here
-        epochs = 1
+        epochs = 2
         checkpoint = f"{args.data_dir}/continual/{args.data}_{args.model}_expt/models/"
 
     print(f"Making directories: {checkpoint}")
@@ -95,7 +95,9 @@ def run(args, run_id):
         # Test
         for u in range(t + 1):
 
-            test_res = appr.test_model(u, dataset[u]["test"])
+            test_res = appr.test_model(
+                u, dataset[u]["test"], args.learning, dataset[u]["task_labels"]
+            )
             print(
                 ">>> Test on task {:2d} - {:15s}: loss={:.3f}, acc={:5.1f}% <<<".format(
                     u, dataset[u]["name"], test_res["loss"], test_res["acc"]
