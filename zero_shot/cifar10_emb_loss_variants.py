@@ -4,14 +4,13 @@ from cifar10_emb_removeclasses import Cifar10EmbRemoveClasses
 
 from utils import init_root
 
-mode_criterion_mapping = {
-    "l2": nn.CrossEntropyLoss,
-    "cossim": nn.CosineSimilarity
-}
+mode_criterion_mapping = {"l2": nn.CrossEntropyLoss, "cossim": nn.CosineSimilarity}
+
 
 def cosine_loss(output, target):
     loss = 1 - torch.cosine_similarity(output, target)
     return loss
+
 
 class Cifar10EmbLossVariants(Cifar10EmbRemoveClasses):
     def __init__(
@@ -20,10 +19,13 @@ class Cifar10EmbLossVariants(Cifar10EmbRemoveClasses):
         classes_to_remove=None,
         variant_name="cifar10_emb_loss",
         epochs=200,
-        mode="l2"
+        mode="l2",
     ):
         super().__init__(
-            root_path=root_path, variant_name=f"{variant_name}_{mode}", epochs=epochs, classes_to_remove=classes_to_remove
+            root_path=root_path,
+            variant_name=f"{variant_name}_{mode}",
+            epochs=epochs,
+            classes_to_remove=classes_to_remove,
         )
         self.similarity_mode = mode
 
@@ -44,4 +46,3 @@ if __name__ == "__main__":
 
         variant.init_word_lookup()
         variant.train_model()
-

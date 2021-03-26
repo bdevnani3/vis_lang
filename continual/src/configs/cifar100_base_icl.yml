@@ -1,14 +1,17 @@
+# Incremental class learning, evaluated on all 100 classes during test and training
+
 num_runs: 1
 data: "cifar100"
 model: "alexnet"
-expt_name: ""
+emb: False
+expt_name: "base_icl"
 output: "logs"
 train_learning_type: "class" # class or task
 test_learning_type: "class"
 
 ntasks: 20
 batch_size: 64
-nepochs: 200
+nepochs: 50
 pc_valid: 0.15
 
 workers: 4

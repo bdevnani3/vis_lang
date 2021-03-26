@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from sentence_transformers import SentenceTransformer
 
 import copy
 
@@ -30,8 +31,6 @@ class Base:
         self.epochs = epochs
         self.dataloader_args = {"batch_size": 32, "shuffle": True, "num_workers": 2}
 
-        self.class_names = None
-        self.test_loader = None
         self.criterion = None
         self.optimizer = None
         self.scheduler = None
@@ -47,6 +46,11 @@ class Base:
         self.logs_path = os.path.join(self.checkpoints_path, "logs.txt")
 
         self.init_model_helpers()
+
+        self.train_learning_type = "class"
+        self.test_learning_type = "class"
+
+        self.task_labels = None
 
     def init_model_helpers(self, criterion=nn.CrossEntropyLoss):
         self.criterion = criterion()
@@ -99,7 +103,7 @@ class Base:
             train_loss += loss.item()
             total += labels.size(0)
 
-            correct += self.num_correct_preds(outputs, labels)
+            correct += self.num_correct_preds(outputs, labels, self.train_learning_type)
 
         epoch_loss = train_loss / len(data_loader)
         epoch_accuracy = correct * 100 / total
@@ -118,8 +122,17 @@ class Base:
         self.train_losses[task_id].append(epoch_loss)
         self.train_accuracy[task_id].append(epoch_accuracy)
 
-    def num_correct_preds(self, outputs, labels):
-        val, predicted = outputs.max(1)
+    # def num_correct_preds(self, outputs, labels):
+    #     val, predicted = outputs.max(1)
+    #     return predicted.eq(labels).sum().item()
+
+    def num_correct_preds(self, outputs, labels, learning_type):
+        if learning_type == "task":
+            z = torch.zeros_like(outputs)
+            z[:, self.task_labels] = 1
+            outputs = outputs * z
+            outputs[outputs == 0] = -np.inf
+        _, predicted = outputs.max(1)
         return predicted.eq(labels).sum().item()
 
     def calc_loss(self, outputs, labels):
@@ -148,7 +161,9 @@ class Base:
                 test_loss += loss.item()
 
                 total += labels.size(0)
-                correct += self.num_correct_preds(outputs, labels)
+                correct += self.num_correct_preds(
+                    outputs, labels, self.train_learning_type
+                )
 
         epoch_loss = test_loss / len(data_loader)
         epoch_accuracy = correct * 100 / total
@@ -210,20 +225,12 @@ class Base:
 
         self.export_data(task_id)
 
-    def test_model(self, task_id, data_loader, learning_type, task_labels=None):
+    def test_model(self, task_id, data_loader):
         test_loss = 0.0
         total = 0
         correct = 0
 
         self.model.eval()
-
-        def num_correct_preds_task(outputs, labels):
-            z = torch.zeros_like(outputs)
-            z[:, task_labels] = 1
-            z = outputs * z
-            z[z == 0] = -np.inf
-            val, predicted = z.max(1)
-            return predicted.eq(labels).sum().item()
 
         with torch.no_grad():
             for i, data in enumerate(data_loader):
@@ -238,10 +245,9 @@ class Base:
 
                 total += labels.size(0)
 
-                if learning_type == "task":
-                    correct += num_correct_preds_task(outputs, labels)
-                else:
-                    correct += self.num_correct_preds(outputs, labels)
+                correct += self.num_correct_preds(
+                    outputs, labels, self.test_learning_type
+                )
 
         epoch_loss = test_loss / len(data_loader)
         epoch_accuracy = correct * 100 / total
@@ -279,3 +285,122 @@ class Base:
 
 def get_device():
     return torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
+###################################################################################
+
+
+class Bert(Base):
+    def __init__(
+        self,
+        model,
+        class_names,
+        checkpoints_path: str = "/nethome/bdevnani3/raid/continual/base/models/",
+        epochs: int = 200,
+    ):
+        super().__init__(model=model, checkpoints_path=checkpoints_path, epochs=epochs)
+
+        # The similarity mode to pass into find_closest_words
+        self.similarity_mode = "cossim"
+        self.model.logit_scale = nn.Parameter(torch.ones([], device=get_device()))
+        self.class_names = class_names
+        self.init_bert_model()
+        self.init_word_lookup()
+
+    def find_closest_words(
+        self,
+        word_lookup: torch.Tensor,
+        x: torch.Tensor,
+        mode: str = "l2",
+        eps: float = 0.00001,
+    ) -> torch.Tensor:
+        """
+        Given a size [N, c] lookup table (N classes, c channels per vector) and a set of [M, c] vectors to look up,
+        returns a size [M] vector of indices from 0 to N-1 containing the closest vector in the lookup for that input.
+
+        Modes:
+            l2     - Computes pairwise L2 distance and chooses the lowest one.
+            cossim - Computes pairwise cosine similarity, and chooses the most similar.
+            dot    - Computes pairwise dot product similarity, and choses the most similar
+        """
+        N, c = word_lookup.shape
+        M, c2 = x.shape
+
+        assert (
+            c == c2
+        ), "The lookup should have the same number of channels as the input."
+
+        if mode == "l2":
+            return (
+                ((word_lookup[None, :, :] - x[:, None, :]) ** 2)
+                .sum(dim=-1)
+                .argmin(dim=-1)
+            )
+        elif mode == "cossim":
+            # Note: we don't need to divide by the length of x here, because it's the same for the argmax.
+            # Also, it's imporant that we can get away with that for numerical stability.
+            return (
+                (x @ word_lookup.t()) / (word_lookup.norm(dim=-1)[None, :] + eps)
+            ).argmax(dim=-1)
+        elif mode == "dot":
+            return (x @ word_lookup.t()).argmax(dim=-1)
+        else:
+            raise NotImplementedError
+
+    def init_bert_model(self, model="stsb-bert-base"):
+        print(f"Initializing {model}...")
+        self.transformer_model = SentenceTransformer(model)
+
+    def init_word_lookup(self):
+        word_vectors = [
+            self.transformer_model.encode(_class) for _class in self.class_names
+        ]
+        self.model.word_lookup = torch.from_numpy(np.stack(word_vectors)).to(
+            get_device()
+        )
+        self.model.word_lookup = self.model.word_lookup / self.model.word_lookup.norm(
+            dim=-1, keepdim=True
+        )
+
+    def num_correct_preds(self, outputs, labels, learning_type):
+        if learning_type == "task":
+            z = torch.zeros_like(self.model.word_lookup)
+            z[self.task_labels, :] = 1
+            z = self.model.word_lookup * z
+            z[z == 0] = np.inf
+            return (
+                (
+                    self.find_closest_words(z, outputs, mode=self.similarity_mode)
+                    == labels
+                )
+                .sum()
+                .item()
+            )
+        return (
+            (
+                self.find_closest_words(
+                    self.model.word_lookup, outputs, mode=self.similarity_mode
+                )
+                == labels
+            )
+            .sum()
+            .item()
+        )
+
+    def calc_loss(self, outputs, labels):
+        """ Most of this is copied line-for-line from https://github.com/openai/CLIP/blob/main/clip/model.py#L353 """
+
+        image_features = outputs
+        text_features = self.model.word_lookup
+
+        # normalized features
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+
+        # Note: I prenormalize the text features in init
+        # text_features  = text_features  / text_features .norm(dim=-1, keepdim=True)
+
+        # cosine similarity as logits
+        logit_scale = self.model.logit_scale.exp()
+        logits_per_image = logit_scale * image_features @ text_features.t()
+
+        return self.criterion(logits_per_image, labels)

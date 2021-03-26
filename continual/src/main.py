@@ -12,15 +12,118 @@ import torch.utils.data
 import torch.utils.data.distributed
 import utils
 
-from model_wrapper import Base
+from model_wrapper import Base, Bert
 
 import pickle
 from models import alexnet
 
+from torchvision import datasets
+
 tstart = time.time()
 
+cifar100_class_names = [
+    "apple",
+    "aquarium_fish",
+    "baby",
+    "bear",
+    "beaver",
+    "bed",
+    "bee",
+    "beetle",
+    "bicycle",
+    "bottle",
+    "bowl",
+    "boy",
+    "bridge",
+    "bus",
+    "butterfly",
+    "camel",
+    "can",
+    "castle",
+    "caterpillar",
+    "cattle",
+    "chair",
+    "chimpanzee",
+    "clock",
+    "cloud",
+    "cockroach",
+    "couch",
+    "crab",
+    "crocodile",
+    "cup",
+    "dinosaur",
+    "dolphin",
+    "elephant",
+    "flatfish",
+    "forest",
+    "fox",
+    "girl",
+    "hamster",
+    "house",
+    "kangaroo",
+    "keyboard",
+    "lamp",
+    "lawn_mower",
+    "leopard",
+    "lion",
+    "lizard",
+    "lobster",
+    "man",
+    "maple_tree",
+    "motorcycle",
+    "mountain",
+    "mouse",
+    "mushroom",
+    "oak_tree",
+    "orange",
+    "orchid",
+    "otter",
+    "palm_tree",
+    "pear",
+    "pickup_truck",
+    "pine_tree",
+    "plain",
+    "plate",
+    "poppy",
+    "porcupine",
+    "possum",
+    "rabbit",
+    "raccoon",
+    "ray",
+    "road",
+    "rocket",
+    "rose",
+    "sea",
+    "seal",
+    "shark",
+    "shrew",
+    "skunk",
+    "skyscraper",
+    "snail",
+    "snake",
+    "spider",
+    "squirrel",
+    "streetcar",
+    "sunflower",
+    "sweet_pepper",
+    "table",
+    "tank",
+    "telephone",
+    "television",
+    "tiger",
+    "tractor",
+    "train",
+    "trout",
+    "tulip",
+    "turtle",
+    "wardrobe",
+    "whale",
+    "willow_tree",
+    "wolf",
+    "woman",
+    "worm",
+]
 
-# Arguments
 parser = argparse.ArgumentParser(description="Adversarial Continual Learning...")
 # Load the config file
 parser.add_argument(
@@ -31,9 +134,7 @@ args = OmegaConf.load(flags.config)
 
 ########################################################################################################################
 
-# Args -- Experiment
-if args.data == "cifar100":
-    from dataloaders import cifar100 as datagenerator
+from dataloaders import cifar100 as datagenerator
 
 ########################################################################################################################
 
@@ -54,27 +155,29 @@ def run(args, run_id):
     dataloader = datagenerator.DatasetGen(args)
     taskcla = dataloader.taskcla
 
-    # Model
-    if args.model == "alexnet":
-        net = alexnet.AlexNet(dataloader.num_classes)
-    else:
-        print(f"Model: {model} not found.")
-        return
-
-    checkpoint = f"{args.data_dir}/continual/{args.data}_{args.model}2/models/"
-    epochs = 50
-    if args.expt == True:
-        # Set any other params for expt here
-        epochs = 2
-        checkpoint = f"{args.data_dir}/continual/{args.data}_{args.model}_expt/models/"
+    checkpoint = f"{args.data_dir}/continual/{args.data}_{args.model}"
+    if args.expt_name:
+        checkpoint += f"_{args.expt_name}"
+    checkpoint += "/"
 
     print(f"Making directories: {checkpoint}")
     make_dirs(checkpoint)
     utils.save_code(checkpoint)
 
-    # Approach
-
-    appr = Base(model=net, checkpoints_path=checkpoint, epochs=epochs)
+    # Model
+    if args.emb:
+        net = alexnet.AlexNet(768)
+        appr = Bert(
+            model=net,
+            class_names=cifar100_class_names,
+            checkpoints_path=checkpoint,
+            epochs=args.nepochs,
+        )
+    else:
+        net = alexnet.AlexNet(dataloader.num_classes)
+        appr = Base(model=net, checkpoints_path=checkpoint, epochs=args.nepochs)
+    appr.train_learning_type = args.train_learning_type
+    appr.test_learning_type = args.test_learning_type
 
     # Loop tasks
     acc = np.zeros((len(taskcla), len(taskcla)), dtype=np.float32)
@@ -88,16 +191,15 @@ def run(args, run_id):
         print("*" * 250)
 
         # Train
+        appr.task_labels = dataset[t]["task_labels"]
         appr.train_model(t, dataset[t])
         print("-" * 250)
         print()
 
         # Test
         for u in range(t + 1):
-
-            test_res = appr.test_model(
-                u, dataset[u]["test"], args.learning, dataset[u]["task_labels"]
-            )
+            appr.task_labels = dataset[u]["task_labels"]
+            test_res = appr.test_model(u, dataset[u]["test"])
             print(
                 ">>> Test on task {:2d} - {:15s}: loss={:.3f}, acc={:5.1f}% <<<".format(
                     u, dataset[u]["name"], test_res["loss"], test_res["acc"]
@@ -110,6 +212,7 @@ def run(args, run_id):
         # Save
         print()
         print("Saved accuracies at " + os.path.join(checkpoint, args.output))
+        make_dirs(os.path.join(checkpoint, args.output))
         np.savetxt(os.path.join(checkpoint, args.output), acc, "%.6f")
 
     avg_acc, gem_bwt = print_log_acc_bwt(
@@ -146,18 +249,21 @@ def print_log_acc_bwt(taskcla, acc, lss, output_path, run_id):
     logs = {}
     # save results
     logs["name"] = output_path
-    logs["taskcla"] = taskcla
-    logs["acc"] = acc
-    logs["loss"] = lss
-    logs["gem_bwt"] = gem_bwt
-    logs["ucb_bwt"] = ucb_bwt
-    logs["rii"] = np.diag(acc)
-    logs["rij"] = acc[-1]
+    logs["avg_acc"] = str(avg_acc)
+    logs["gem_bwt"] = str(gem_bwt)
+    logs["ucb_bwt"] = str(ucb_bwt)
+    logs["taskcla"] = str(taskcla)
+    logs["acc"] = str(acc)
+    logs["loss"] = str(lss.tolist())
+    logs["rii"] = str(np.diag(acc))
+    logs["rij"] = str(acc[-1])
 
     # pickle
-    path = os.path.join(output_path, f"logs_run_id_{run_id}.p")
-    with open(path, "wb") as output:
-        pickle.dump(logs, output)
+    import json
+
+    path = os.path.join(output_path, f"logs_run_id_{run_id}.json")
+    with open(path, "w") as output:
+        json.dump(logs, output)
 
     print("Log file saved in ", path)
     return avg_acc, gem_bwt
@@ -223,4 +329,11 @@ def make_dirs(path: str):
 #######################################################################################################################
 
 if __name__ == "__main__":
+
+    # for conf in ["cifar100_base_icl.yml", "cifar100_base_itl.yml"]:
+    #     print("###############", conf, "###############")
+    #     parser = argparse.ArgumentParser(description='Adversarial Continual Learning...')
+    #     parser.add_argument('--config',  type=str, default=f'./configs/{conf}')
+    #     flags =  parser.parse_args()
+    #     args = OmegaConf.load(flags.config)
     main(args)

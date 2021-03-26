@@ -1,8 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-#
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-
 from __future__ import print_function
 from PIL import Image
 import os
@@ -44,12 +39,6 @@ class iCIFAR10(datasets.CIFAR10):
         if not isinstance(classes, list):
             classes = [classes]
 
-        # self.class_mapping = {c: i for i, c in enumerate(classes)}
-        # self.class_indices = {}
-
-        # for cls in classes:
-        #     self.class_indices[self.class_mapping[cls]] = []
-
         if self.train:
             train_data = []
             train_labels = []
@@ -58,7 +47,6 @@ class iCIFAR10(datasets.CIFAR10):
                 if self.targets[i] in classes:
                     train_data.append(self.data[i])
                     train_labels.append(self.targets[i])
-                    # self.class_indices[self.class_mapping[self.targets[i]]].append(i)
 
             self.train_data = np.array(train_data)
             self.train_labels = train_labels

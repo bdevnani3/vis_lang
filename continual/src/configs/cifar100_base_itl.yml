@@ -1,0 +1,18 @@
+# Incremental task learning, evaluated on the classes for that specific task at both train and test
+
+num_runs: 1
+data: "cifar100"
+model: "alexnet"
+emb: False
+expt_name: "base_itl"
+output: "logs"
+train_learning_type: "task" # class or task
+test_learning_type: "task"
+
+ntasks: 20
+batch_size: 64
+nepochs: 50
+pc_valid: 0.15
+
+workers: 4
+device: "cuda"
