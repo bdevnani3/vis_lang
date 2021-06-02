@@ -1,0 +1,8 @@
+# Default task
+
+experiment_name: "baseline"
+data: "cifar10"
+embedding: "default" # bert, w2v, default
+criterion: "ce" # ce, mse
+epochs: 200
+loss: "default" # default, cosine, clip, dot

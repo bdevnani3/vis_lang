@@ -1,0 +1,4 @@
+Add documentation for every new experiment name
+
+cifar100_bert_icl_itl_valid: Add a seperate validation set
+cifar100_bert_icl_itl_valid_last_model: use last model instead of best

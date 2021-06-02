@@ -1,0 +1,18 @@
+# Hybrid task learning, evaluated on all classes at training but at only the task specific classes at Test time
+
+num_runs: 2
+data: "cifar100"
+model: "alexnet"
+emb: False
+expt_name: "base_icl_itl_deep_test_itl"
+output: "logs"
+train_learning_type: "class" # class or task
+test_learning_type: "task"
+
+ntasks: 20
+batch_size: 64
+nepochs: 50
+pc_valid: 0.15
+
+workers: 4
+device: "cuda"

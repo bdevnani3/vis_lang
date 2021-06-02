@@ -1,0 +1,15 @@
+num_runs: 1
+data: "cifar100"
+model: "alexnet"
+expt_name: ""
+output: "logs"
+train_learning_type: "class" # class or task
+test_learning_type: "class"
+
+ntasks: 20
+batch_size: 64
+nepochs: 200
+pc_valid: 0.15
+
+workers: 4
+device: "cuda"

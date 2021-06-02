@@ -1,0 +1,8 @@
+# Default task
+
+experiment_name: "bert_cifar100_clip"
+data: "cifar100"
+embedding: "bert"
+criterion: "ce"
+epochs: 200
+loss: "clip"

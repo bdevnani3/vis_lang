@@ -1,0 +1,8 @@
+# Default task
+
+experiment_name: "bert_cifar100_cossim"
+data: "cifar100"
+embedding: "bert" #
+criterion: "cossim" 
+epochs: 200
+loss: "cosine"

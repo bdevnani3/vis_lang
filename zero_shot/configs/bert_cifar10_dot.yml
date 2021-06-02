@@ -1,0 +1,8 @@
+# Default task
+
+experiment_name: "bert_cifar10_dot"
+data: "cifar10"
+embedding: "bert" #
+criterion: "ce" # doesn't matter, will be overriden because of loss
+epochs: 200
+loss: "dot"
