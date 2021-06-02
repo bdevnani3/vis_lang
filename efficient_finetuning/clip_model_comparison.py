@@ -118,7 +118,7 @@ def resnet_linear_probe(train_dataset, test_dataset):
     train_features, train_labels = get_resnet_features(train_dataset)
     test_features, test_labels = get_resnet_features(test_dataset)
 
-    classifier = LogisticRegression(random_state=1, C=0.5, max_iter=5000, verbose=1)
+    classifier = LogisticRegression(random_state=1, C=0.5, max_iter=2000, verbose=1)
     classifier.fit(train_features, train_labels)
     predictions = classifier.predict(test_features)
     accuracy = np.mean((test_labels == predictions).astype(np.float)) * 100.
@@ -148,7 +148,7 @@ def clip_linear_probe(train_dataset, test_dataset):
     train_features, train_labels = get_clip_features(train_dataset)
     test_features, test_labels = get_clip_features(test_dataset)
 
-    classifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1)
+    classifier = LogisticRegression(random_state=0, C=0.2, max_iter=2000, verbose=1)
     classifier.fit(train_features, train_labels)
     predictions = classifier.predict(test_features)
     accuracy = np.mean((test_labels == predictions).astype(np.float)) * 100.
