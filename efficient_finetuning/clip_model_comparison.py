@@ -1,74 +1,91 @@
-
 import os
 import clip
 import torch
-from torchvision.datasets import CIFAR100
-from torchvision import datasets, transforms, models
+from torchvision import transforms, models
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+import argparse
+from omegaconf import OmegaConf
+
 import json
 
-results_path="results"
+from datasets import *
+
+results_path = "results"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 clip_model, clip_preprocess = None, None
 resnet_model = None
 
 
-def clip_zero_shot(dataset, classes, phrase="a photo of a {}"):
+def clip_zero_shot(
+    loader,
+    classes,
+    clip_model_name="ViT-B/32",
+    phrase_file="configs/phrases/default.txt",
+):
+    def zeroshot_classifier(classnames, templates):
+        with torch.no_grad():
+            zeroshot_weights = []
+            for classname in tqdm(classnames):
+                texts = [
+                    template.format(classname) for template in templates
+                ]  # format with class
+                texts = clip.tokenize(texts).cuda()  # tokenize
+                class_embeddings = model.encode_text(texts)  # embed with text encoder
+                class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
+                class_embedding = class_embeddings.mean(dim=0)
+                class_embedding /= class_embedding.norm()
+                zeroshot_weights.append(class_embedding)
+            zeroshot_weights = torch.stack(zeroshot_weights, dim=1).cuda()
+        return zeroshot_weights
+
+    def accuracy(output, target, topk=(1,)):
+        pred = output.topk(max(topk), 1, True, True)[1].t()
+        correct = pred.eq(target.view(1, -1).expand_as(pred))
+        return [
+            float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy())
+            for k in topk
+        ]
 
     global clip_model, clip_preprocess
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # lazy load
     if clip_model == None:
-        clip_model, clip_preprocess = clip.load('ViT-B/32', device)
+        clip_model, clip_preprocess = clip.load(clip_model_name, device)
 
-    text_inputs = torch.cat([clip.tokenize(phrase.format(c)) for c in dataset.classes]).to(device)
+    templates = []
+    with open(phrase_file) as f:
+        templates = [line for line in f]
 
-    top_1_accuracy = 0
-    top_5_accuracy = 0
-
-    len_classes = len(classes)
-
-    per_class_accuracy_top1 = { k:[0,0, dataset.classes[k]] for k in range(len_classes)} # correct, total, class_name
-    per_class_accuracy_top5 = { k:[0,0, dataset.classes[k]] for k in range(len_classes)} 
+    zeroshot_weights = zeroshot_classifier(classes, templates)
 
     with torch.no_grad():
-        text_features = clip_model.encode_text(text_inputs)
-        text_features /= text_features.norm(dim=-1, keepdim=True)
+        top1, top5, n = 0.0, 0.0, 0.0
+        for i, (images, target) in enumerate(tqdm(loader)):
+            images = images.cuda()
+            target = target.cuda()
 
-    for i in tqdm(range(len(dataset))):
+            # predict
+            image_features = model.encode_image(images)
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+            logits = 100.0 * image_features @ zeroshot_weights
 
-        # Prepare the inputs
-        image, class_id = dataset[i]
-        image_input = clip_preprocess(image).unsqueeze(0).to(device)
+            # measure accuracy
+            acc1, acc5 = accuracy(logits, target, topk=(1, 5))
+            top1 += acc1
+            top5 += acc5
+            n += images.size(0)
 
-        # Calculate features
-        with torch.no_grad():
-            image_features = clip_model.encode_image(image_input)
+    top1 = (top1 / n) * 100
+    top5 = (top5 / n) * 100
 
-        # Pick the top 5 most similar labels for the image
-        image_features /= image_features.norm(dim=-1, keepdim=True)
-        similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
-        values, indices = similarity[0].topk(5)
-
-        if indices[0] == class_id:
-            top_1_accuracy +=1
-            per_class_accuracy_top1[class_id][0] +=1
-
-        if class_id in indices:
-            top_5_accuracy +=1
-            per_class_accuracy_top5[class_id][0] +=1
-
-        per_class_accuracy_top1[class_id][1] +=1
-        per_class_accuracy_top5[class_id][1] +=1
-
-    return top_1_accuracy/float(len(dataset)), top_5_accuracy/float(len(dataset)), per_class_accuracy_top1, per_class_accuracy_top5
+    return top1, top5
 
 
 def get_resnet_features(dataset):
@@ -77,10 +94,10 @@ def get_resnet_features(dataset):
 
     global resnet_model
 
-    for inps, labels in tqdm(DataLoader(dataset, batch_size=100, num_workers=4)):
-        with torch.no_grad():
+    resnet_model.eval()
+    with torch.no_grad():
+        for inps, labels in tqdm(dataset):
             features = resnet_model(inps)
-
             all_features.append(features)
             all_labels.append(labels)
 
@@ -90,196 +107,149 @@ def get_resnet_features(dataset):
 def get_clip_features(dataset):
     all_features = []
     all_labels = []
-    
+
     global clip_model
 
     with torch.no_grad():
-        for images, labels in tqdm(DataLoader(dataset, batch_size=100, num_workers=4)):
+        for images, labels in tqdm(dataset):
             features = clip_model.encode_image(images.to(device))
-
             all_features.append(features)
             all_labels.append(labels)
 
     return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
 
 
-def resnet_linear_probe(train_dataset, test_dataset):
+def resnet_linear_probe(train_dataloader, test_dataloader, classes, C=1, max_iter=1000):
     # Use Resnet 50 trained on imagnet to extract features, train linear probe on top.
 
     global resnet_model
 
-    len_classes = len(train_dataset.classes)
+    len_classes = len(classes)
 
-    per_class_accuracy_top1 = { k:[0,0, test_dataset.classes[k]] for k in range(len_classes)}
+    per_class_accuracy_top1 = {k: [0, 0, classes[k]] for k in range(len_classes)}
 
-    if resnet_model == None:
-        resnet_model = torch.hub.load('pytorch/vision:v0.8.2', 'resnet50', pretrained=True)
+    resnet_model.eval()
 
-    train_features, train_labels = get_resnet_features(train_dataset)
-    test_features, test_labels = get_resnet_features(test_dataset)
+    train_features, train_labels = get_resnet_features(train_dataloader)
+    test_features, test_labels = get_resnet_features(train_dataloader)
 
-    classifier = LogisticRegression(random_state=1, C=0.5, max_iter=2000, verbose=1)
+    classifier = LogisticRegression(C=C, max_iter=max_iter, n_jobs=10)
     classifier.fit(train_features, train_labels)
     predictions = classifier.predict(test_features)
-    accuracy = np.mean((test_labels == predictions).astype(np.float)) * 100.
+    accuracy = np.mean((test_labels == predictions).astype(np.float)) * 100.0
 
     for i in range(len(test_labels)):
         if test_labels[i] == predictions[i]:
-            per_class_accuracy_top1[test_labels[i]][0] +=1
-        per_class_accuracy_top1[test_labels[i]][1] +=1
+            per_class_accuracy_top1[test_labels[i]][0] += 1
+        per_class_accuracy_top1[test_labels[i]][1] += 1
 
     return accuracy, per_class_accuracy_top1
 
 
-def clip_linear_probe(train_dataset, test_dataset):
+def clip_linear_probe(
+    train_dataset, test_dataset, classes, clip_model_name="ViT-B/32", C=1, max_iter=1000
+):
     # Use Resnet 50 trained on imagnet to extract features, train linear probe on top.
 
     global clip_model, clip_preprocess
 
-    len_classes = len(train_dataset.classes)
+    len_classes = len(classes)
 
-    per_class_accuracy_top1 = { k:[0,0, test_dataset.classes[k]] for k in range(len_classes)}
-    
-    # lazy load
-    if clip_model == None:
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        clip_model, clip_preprocess = clip.load('ViT-B/32', device)
+    per_class_accuracy_top1 = {k: [0, 0, classes[k]] for k in range(len_classes)}
 
     train_features, train_labels = get_clip_features(train_dataset)
     test_features, test_labels = get_clip_features(test_dataset)
 
-    classifier = LogisticRegression(random_state=0, C=0.2, max_iter=2000, verbose=1)
+    classifier = LogisticRegression(C=C, max_iter=max_iter, n_jobs=6)
     classifier.fit(train_features, train_labels)
     predictions = classifier.predict(test_features)
-    accuracy = np.mean((test_labels == predictions).astype(np.float)) * 100.
+    accuracy = np.mean((test_labels == predictions).astype(np.float)) * 100.0
 
     for i in range(len(test_labels)):
         if test_labels[i] == predictions[i]:
-            per_class_accuracy_top1[test_labels[i]][0] +=1
-        per_class_accuracy_top1[test_labels[i]][1] +=1
+            per_class_accuracy_top1[test_labels[i]][0] += 1
+        per_class_accuracy_top1[test_labels[i]][1] += 1
 
     return accuracy, per_class_accuracy_top1
 
 
-###########
-# Datasets
-###########
-
-def cifar100_expt(expt_name="base"):
-    print("CIFAR")
-    root = os.path.expanduser("/nethome/bdevnani3/raid/data/")
-
-    transform = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize(
-                (0.5071, 0.4865, 0.4409), (0.2673, 0.2564, 0.2762)
-            ),
-        ]
-    )
-
-    # lazy load
-    global clip_preprocess
-    if clip_preprocess == None:
-        _, clip_preprocess = clip.load('ViT-B/32', device)
-
-    train = CIFAR100(root, download=True, train=True, transform=transform)
-    test = CIFAR100(root, download=True, train=False, transform=transform)
-    train_clip = CIFAR100(root, download=True, train=True, transform=clip_preprocess)
-    test_clip = CIFAR100(root, download=True, train=False, transform=clip_preprocess)
-
-    print(" Clip Zero Shot")
-    czs = clip_zero_shot(test_clip, test.classes)
-    print(f"Clip Zero Shot Acc (1%): {czs[0]}")
-    print(f"Clip Zero Shot Acc (5%): {czs[1]}")
-
-    print(" Resnet Linear Probe")
-    rlp = resnet_linear_probe(train,test)
-    print(f"Resnet + Linear Probe Acc (1%): {rlp[0]}")
-
-    print(" Clip Linear Probe")
-    clp = clip_linear_probe(train_clip,test_clip)
-    print(f"CLIP + Linear Probe Acc (1%): {clp[0]}")
-
-    print(f"""
-    CIFAR100 Results:
-    Clip Zero Shot Acc (1%): {czs[0]}
-    Clip Zero Shot Acc (5%): {czs[1]}
-    Resnet + Linear Probe Acc (1%): {rlp[0]}
-    CLIP + Linear Probe Acc (1%): {clp[0]}
-    """)
-    with open(f"{results_path}/cifar100/{expt_name}-accuracies", "w") as outfile: 
-        outfile.write(f"""
-            CIFAR100 Results:
-            Clip Zero Shot Acc (1%): {czs[0]}
-            Clip Zero Shot Acc (5%): {czs[1]}
-            Resnet + Linear Probe Acc (1%): {rlp[0]}
-            CLIP + Linear Probe Acc (1%): {clp[0]}
-            """)
+######################
+# Main function
+######################
 
 
-    with open(f"{results_path}/cifar100/{expt_name}-czs_per_class_acc_1.json", "w") as outfile: 
-        json.dump(czs[2], outfile)
+def run_expts(args):
+    """
+    Currently supports clip_zero_shot, clip_linear_probe, resnet_linear_probe expts
+    """
 
-    with open(f"{results_path}/cifar100/{expt_name}-czs_per_class_acc_5.json", "w") as outfile: 
-        json.dump(czs[3], outfile)
+    results = {}
+    results["params"] = {}
 
-def flowers_expt(expt_name="base"):
-    print("FLOWERS")
+    dataset = args.data
+    dataset_obj = None
+    if dataset == "cifar100":
+        dataset_obj = Cifar100(args.num_workers, args.batch_size)
+    elif dataset == "flowers102":
+        dataset_obj = Flowers102(args.num_workers, args.batch_size)
+    elif dataset == "oxfordpets":
+        dataset_obj = OxfordPets(args.num_workers, args.batch_size)
+    results["params"]["data"] = str(args.data)
+    results["params"]["batch_size"] = int(args.batch_size)
 
-    root = datasets.ImageFolder("/nethome/bdevnani3/raid/data/flower_data")
+    assert dataset_obj is not None, "Please select a valid dataset"
 
-    transform = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize(
-                [0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276]
-            ),
-        ]
-    )
+    global clip_model, clip_preprocess
 
-    train = datasets.ImageFolder("/nethome/bdevnani3/raid/data/flower_data/train", transform=transform)
-    test = datasets.ImageFolder("/nethome/bdevnani3/raid/data/flower_data/test", transform=transform)
-    train_clip = datasets.ImageFolder("/nethome/bdevnani3/raid/data/flower_data/train")
-    test_clip = datasets.ImageFolder("/nethome/bdevnani3/raid/data/flower_data/test")
+    if "clip" in args.expts:
+        if clip_preprocess is None or clip_model is None:
+            clip_model, clip_preprocess = clip.load(args.clip_model, device)
+        train_loader, _ = dataset_obj.get_train_loaders(transform_fn=clip_preprocess)
+        test_loader = dataset_obj.get_test_loader(transform_fn=clip_preprocess)
+        results["params"]["clip_model"] = str(args.clip_model)
 
-    print(" Clip Zero Shot")
-    czs = clip_zero_shot(test_clip, test.classes, phrase="a photo of a {}, a kind of flower.")
-    print(f"Clip Zero Shot Acc (1%): {czs[0]}")
-    print(f"Clip Zero Shot Acc (5%): {czs[1]}")
+        if "clip_zs" in args.expts:
+            print(f"Running Clip Zeroshot on {dataset_obj.name}")
+            czs = clip_zero_shot(
+                test_loader,
+                dataset_obj.classes,
+                phrase_file=args.phrases_file,
+            )
+            print(f"Clip Zero Shot Acc: {czs[0]}")
+            results["clip_zs"] = {"Top1": czs[0], "Top5": czs[1]}
+            results["params"]["phrases_file"] = int(args.phrases_file)
 
-    print(" Resnet Linear Probe")
-    rlp = resnet_linear_probe(train,test)
-    print(f"Resnet + Linear Probe Acc (1%): {rlp[0]}")
+        if "clip_lp" in args.expts:
+            print(f"Running Clip Linear Probe on {dataset_obj.name}")
+            clp = clip_linear_probe(train_loader, test_loader, dataset_obj.classes)
+            print(f"Clip Linear Probe Acc: {clp[0]}")
+            results["clip_lp"] = {"Top1": clp[0]}
+            results["params"]["c_clip"] = int(args.c_clip)
 
-    print(" Clip Linear Probe")
-    clp = clip_linear_probe(train_clip,test_clip)
-    print(f"CLIP + Linear Probe Acc (1%): {clp[0]}")
+    if "resnet_lp" in args.expts:
+        global resnet_model
+        if resnet_model == None:
+            resnet_model = torch.hub.load(
+                "pytorch/vision:v0.8.2", "resnet50", pretrained=True
+            )
+        print(f"Running Resnet50 Linear Probe on {dataset_obj.name}")
+        train_loader, _ = dataset_obj.get_train_loaders()
+        test_loader = dataset_obj.get_test_loader()
+        rlp = resnet_linear_probe(train_loader, test_loader, dataset_obj.classes)
+        print(f"Resnet50 Linear Probe Acc: {rlp[0]}")
+        results["resnet_lp"] = {"Top1": rlp[0]}
+        results["params"]["c_resnet"] = int(args.c_resnet)
 
-    print(f"""
-    Flower Dataset Results:
-    Clip Zero Shot Acc (1%): {czs[0]}
-    Clip Zero Shot Acc (5%): {czs[1]}
-    Resnet + Linear Probe Acc (1%): {rlp[0]}
-    CLIP + Linear Probe Acc (1%): {clp[0]}
-    """)
-    with open(f"{results_path}/cifar100/{expt_name}-accuracies", "w") as outfile: 
-        outfile.write(f"""
-            Flower Dataset Results:
-            Clip Zero Shot Acc (1%): {czs[0]}
-            Clip Zero Shot Acc (5%): {czs[1]}
-            Resnet + Linear Probe Acc (1%): {rlp[0]}
-            CLIP + Linear Probe Acc (1%): {clp[0]}
-            """)
+    with open(f"{results_path}/{args.task_name}.json", "w") as outfile: 
+        json.dump(results, outfile)
 
-
-    with open(f"{results_path}/flower/{expt_name}-czs_per_class_acc_1.json", "w") as outfile: 
-        json.dump(czs[2], outfile)
-
-    with open(f"{results_path}/flower/{expt_name}-czs_per_class_acc_5.json", "w") as outfile: 
-        json.dump(czs[3], outfile)    
+    return results
 
 
 if __name__ == "__main__":
-    # flowers_expt()
-    cifar100_expt()
+    parser = argparse.ArgumentParser(description="Clip Experiments")
+    parser.add_argument("--config", type=str, default="./configs/dummy.yml")
+    flags = parser.parse_args()
+    args = OmegaConf.load(flags.config)
+    results = run_expts(args)
+    results["args"] = vars(args)
