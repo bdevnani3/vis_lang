@@ -1,0 +1,1 @@
+{"params": {"data": "oxfordpets", "batch_size": 100, "clip_model": "ViT-B/32", "phrases_file": "configs/phrases/pets.txt", "c_clip": 0, "c_resnet": 0}, "clip_zs": {"Top1": 1.41643059490085, "Top5": 13.125590179414543}, "clip_lp": {"Top1": 92.06798866855524}, "resnet_lp": {"Top1": 93.47747747747748}}

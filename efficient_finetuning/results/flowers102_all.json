@@ -1,0 +1,1 @@
+{"params": {"data": "flowers102", "batch_size": 100, "clip_model": "ViT-B/32", "phrases_file": "configs/phrases/flowers.txt", "c_clip": 0, "c_resnet": 0}, "clip_zs": {"Top1": 0.1221001221001221, "Top5": 4.029304029304029}, "clip_lp": {"Top1": 97.55799755799755}, "resnet_lp": {"Top1": 94.2918192918193}}

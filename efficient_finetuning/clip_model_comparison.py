@@ -64,6 +64,7 @@ def clip_zero_shot(
     with open(phrase_file) as f:
         templates = [line for line in f]
 
+    print(templates)
     zeroshot_weights = zeroshot_classifier(classes, templates)
 
     with torch.no_grad():
@@ -210,7 +211,9 @@ def run_expts(args):
         results["params"]["clip_model"] = str(args.clip_model)
 
         if "clip_zs" in args.expts:
+            print("-------------------------------------")
             print(f"Running Clip Zeroshot on {dataset_obj.name}")
+            print("-------------------------------------")
             czs = clip_zero_shot(
                 test_loader,
                 dataset_obj.classes,
@@ -221,7 +224,9 @@ def run_expts(args):
             results["params"]["phrases_file"] = str(args.phrases_file)
 
         if "clip_lp" in args.expts:
+            print("-------------------------------------")
             print(f"Running Clip Linear Probe on {dataset_obj.name}")
+            print("-------------------------------------")
             clp = clip_linear_probe(train_loader, test_loader, dataset_obj.classes)
             print(f"Clip Linear Probe Acc: {clp[0]}")
             results["clip_lp"] = {"Top1": clp[0]}
@@ -233,7 +238,9 @@ def run_expts(args):
             resnet_model = torch.hub.load(
                 "pytorch/vision:v0.8.2", "resnet50", pretrained=True
             )
+        print("-------------------------------------")
         print(f"Running Resnet50 Linear Probe on {dataset_obj.name}")
+        print("-------------------------------------")
         train_loader, _ = dataset_obj.get_train_loaders()
         test_loader = dataset_obj.get_test_loader()
         rlp = resnet_linear_probe(train_loader, test_loader, dataset_obj.classes)

@@ -165,6 +165,32 @@ class Flowers102(ClipExptDataset):
     def __init__(self, num_workers, batch_size):
         super().__init__(num_workers, batch_size)
         self.name = "Flowers102"
+        self.classes = [
+    "pink primrose", "hard-leaved pocket orchid", "canterbury bells",
+    "sweet pea", "english marigold", "tiger lily", "moon orchid",
+    "bird of paradise", "monkshood", "globe thistle", "snapdragon",
+    "colt's foot", "king protea", "spear thistle", "yellow iris",
+    "globe-flower", "purple coneflower", "peruvian lily", "balloon flower",
+    "giant white arum lily", "fire lily", "pincushion flower", "fritillary",
+    "red ginger", "grape hyacinth", "corn poppy", "prince of wales feathers",
+    "stemless gentian", "artichoke", "sweet william", "carnation",
+    "garden phlox", "love in the mist", "mexican aster", "alpine sea holly",
+    "ruby-lipped cattleya", "cape flower", "great masterwort", "siam tulip",
+    "lenten rose", "barbeton daisy", "daffodil", "sword lily", "poinsettia",
+    "bolero deep blue", "wallflower", "marigold", "buttercup", "oxeye daisy",
+    "common dandelion", "petunia", "wild pansy", "primula", "sunflower",
+    "pelargonium", "bishop of llandaff", "gaura", "geranium", "orange dahlia",
+    "pink-yellow dahlia?", "cautleya spicata", "japanese anemone",
+    "black-eyed susan", "silverbush", "californian poppy", "osteospermum",
+    "spring crocus", "bearded iris", "windflower", "tree poppy", "gazania",
+    "azalea", "water lily", "rose", "thorn apple", "morning glory",
+    "passion flower", "lotus", "toad lily", "anthurium", "frangipani",
+    "clematis", "hibiscus", "columbine", "desert-rose", "tree mallow",
+    "magnolia", "cyclamen", "watercress", "canna lily", "hippeastrum",
+    "bee balm", "ball moss", "foxglove", "bougainvillea", "camellia", "mallow",
+    "mexican petunia", "bromelia", "blanket flower", "trumpet creeper",
+    "blackberry lily"
+]
 
     def get_train_loaders(self, transform_fn=None):
 
@@ -190,9 +216,6 @@ class Flowers102(ClipExptDataset):
             num_workers=self.num_workers,
         )
 
-        if self.classes == None:
-            self.classes = train_dataset.classes
-
         return train_loader, valid_loader
 
     def get_test_loader(self, transform_fn=None):
@@ -210,9 +233,6 @@ class Flowers102(ClipExptDataset):
             num_workers=self.num_workers,
         )
 
-        if self.classes == None:
-            self.classes = test_dataset.classes
-
         return test_loader
 
 
@@ -223,6 +243,41 @@ class OxfordPets(ClipExptDataset):
     def __init__(self, num_workers, batch_size):
         super().__init__(num_workers, batch_size)
         self.name = "OxfordPets"
+        self.classes = ['Abyssinian',
+ 'Bengal',
+ 'Birman',
+ 'Bombay',
+ 'British',
+ 'Egyptian',
+ 'Maine',
+ 'Persian',
+ 'Ragdoll',
+ 'Russian',
+ 'Siamese',
+ 'Sphynx',
+ 'american',
+ 'basset',
+ 'beagle',
+ 'boxer',
+ 'chihuahua',
+ 'english',
+ 'german',
+ 'great',
+ 'havanese',
+ 'japanese',
+ 'keeshond',
+ 'leonberger',
+ 'miniature',
+ 'newfoundland',
+ 'pomeranian',
+ 'pug',
+ 'saint',
+ 'samoyed',
+ 'scottish',
+ 'shiba',
+ 'staffordshire',
+ 'wheaten',
+ 'yorkshire']
 
     def get_train_loaders(self, transform_fn=None):
 
@@ -247,8 +302,6 @@ class OxfordPets(ClipExptDataset):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
         )
-        if self.classes == None:
-            self.classes = train_dataset.classes
 
         return train_loader, valid_loader
 
@@ -266,8 +319,5 @@ class OxfordPets(ClipExptDataset):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
         )
-
-        if self.classes == None:
-            self.classes = test_dataset.classes
 
         return test_loader

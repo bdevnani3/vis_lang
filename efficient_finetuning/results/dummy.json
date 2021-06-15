@@ -1,1 +1,1 @@
-{"params": {"data": "oxfordpets", "batch_size": 100, "clip_model": "ViT-B/32", "phrases_file": "configs/phrases/default.txt"}, "clip_zs": {"Top1": 1.6052880075542966, "Top5": 10.576015108593012}}
+{"params": {"data": "oxfordpets", "batch_size": 100, "clip_model": "ViT-B/32", "phrases_file": "configs/phrases/default.txt", "c_clip": 0, "c_resnet": 0}, "clip_zs": {"Top1": 1.6052880075542966, "Top5": 10.576015108593012}, "clip_lp": {"Top1": 92.06798866855524}, "resnet_lp": {"Top1": 93.17117117117118}}

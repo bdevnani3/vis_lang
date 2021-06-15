@@ -1,0 +1,1 @@
+{"params": {"data": "cifar100", "batch_size": 100, "clip_model": "ViT-B/32", "phrases_file": "configs/phrases/default.txt", "c_clip": 0, "c_resnet": 0}, "clip_zs": {"Top1": 59.46, "Top5": 85.65}, "clip_lp": {"Top1": 79.10000000000001}, "resnet_lp": {"Top1": 64.66666666666666}}

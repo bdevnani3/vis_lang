@@ -1,14 +1,14 @@
 # Dummy task
 
-task_name: "dummy"
-data: "oxfordpets"
+task_name: "cifar100_all"
+data: "cifar100"
 
 # clip_zs -> clip zero shot, clip_lp -> clip linear probe, resnet_lp -> resnet linear probe
 expts: "clip_zs,clip_lp,resnet_lp" 
 
 #### Hyperparameters
 c_clip: .05 # Regularization term for linear probe
-c_resnet: .1
+c_resnet: .05
 max_iter: 2000 # Max iters for linear probe
 num_workers: 4 # Dataloader
 batch_size: 100 # Dataloader
