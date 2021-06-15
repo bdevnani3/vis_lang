@@ -4,7 +4,7 @@ task_name: "dummy"
 data: "oxfordpets"
 
 # clip_zs -> clip zero shot, clip_lp -> clip linear probe, resnet_lp -> resnet linear probe
-expts: "resnet_lp" 
+expts: "clip_zs" 
 
 #### Hyperparameters
 c_clip: .05 # Regularization term for linear probe

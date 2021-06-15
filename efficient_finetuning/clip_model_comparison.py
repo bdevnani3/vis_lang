@@ -28,6 +28,10 @@ def clip_zero_shot(
     clip_model_name="ViT-B/32",
     phrase_file="configs/phrases/default.txt",
 ):
+
+    global clip_model, clip_preprocess
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
     def zeroshot_classifier(classnames, templates):
         with torch.no_grad():
             zeroshot_weights = []
@@ -36,7 +40,7 @@ def clip_zero_shot(
                     template.format(classname) for template in templates
                 ]  # format with class
                 texts = clip.tokenize(texts).cuda()  # tokenize
-                class_embeddings = model.encode_text(texts)  # embed with text encoder
+                class_embeddings = clip_model.encode_text(texts)  # embed with text encoder
                 class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
                 class_embedding = class_embeddings.mean(dim=0)
                 class_embedding /= class_embedding.norm()
@@ -51,9 +55,6 @@ def clip_zero_shot(
             float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy())
             for k in topk
         ]
-
-    global clip_model, clip_preprocess
-    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # lazy load
     if clip_model == None:
@@ -72,7 +73,7 @@ def clip_zero_shot(
             target = target.cuda()
 
             # predict
-            image_features = model.encode_image(images)
+            image_features = clip_model.encode_image(images)
             image_features /= image_features.norm(dim=-1, keepdim=True)
             logits = 100.0 * image_features @ zeroshot_weights
 
@@ -217,7 +218,7 @@ def run_expts(args):
             )
             print(f"Clip Zero Shot Acc: {czs[0]}")
             results["clip_zs"] = {"Top1": czs[0], "Top5": czs[1]}
-            results["params"]["phrases_file"] = int(args.phrases_file)
+            results["params"]["phrases_file"] = str(args.phrases_file)
 
         if "clip_lp" in args.expts:
             print(f"Running Clip Linear Probe on {dataset_obj.name}")

@@ -258,7 +258,7 @@ class OxfordPets(ClipExptDataset):
             transform_fn = self.test_transform
 
         test_dataset = datasets.ImageFolder(
-            self.root + "oxfordpets_data/test", transform=transform_fn
+            self.root + "oxford_pets/test", transform=transform_fn
         )
 
         test_loader = torch.utils.data.DataLoader(
