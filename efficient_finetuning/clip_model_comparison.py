@@ -31,7 +31,7 @@ def clip_zero_shot(
 
     global clip_model, clip_preprocess
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    
+
     def zeroshot_classifier(classnames, templates):
         with torch.no_grad():
             zeroshot_weights = []
@@ -40,7 +40,9 @@ def clip_zero_shot(
                     template.format(classname) for template in templates
                 ]  # format with class
                 texts = clip.tokenize(texts).cuda()  # tokenize
-                class_embeddings = clip_model.encode_text(texts)  # embed with text encoder
+                class_embeddings = clip_model.encode_text(
+                    texts
+                )  # embed with text encoder
                 class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
                 class_embedding = class_embeddings.mean(dim=0)
                 class_embedding /= class_embedding.norm()
@@ -64,7 +66,6 @@ def clip_zero_shot(
     with open(phrase_file) as f:
         templates = [line for line in f]
 
-    print(templates)
     zeroshot_weights = zeroshot_classifier(classes, templates)
 
     with torch.no_grad():
@@ -248,7 +249,7 @@ def run_expts(args):
         results["resnet_lp"] = {"Top1": rlp[0]}
         results["params"]["c_resnet"] = int(args.c_resnet)
 
-    with open(f"{results_path}/{args.task_name}.json", "w") as outfile: 
+    with open(f"{results_path}/{args.task_name}.json", "w") as outfile:
         json.dump(results, outfile)
 
     return results

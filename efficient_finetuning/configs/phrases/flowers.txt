@@ -6,4 +6,4 @@
 'a shrub of type: {}'
 'a tree of type: {}'
 'a {} with leaves.'
-'a {} with petals.,
+'a {} with petals.

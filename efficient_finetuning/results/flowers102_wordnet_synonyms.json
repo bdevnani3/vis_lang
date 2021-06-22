@@ -1,0 +1,1 @@
+{"params": {"data": "flowers102", "batch_size": 100, "clip_model": "ViT-B/32", "phrases_file": "configs/phrases/flowers.txt"}, "clip_zs": {"Top1": 58.852258852258856, "Top5": 83.51648351648352}}
