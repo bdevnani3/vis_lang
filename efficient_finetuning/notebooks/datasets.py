@@ -8,7 +8,11 @@ import numpy as np
 
 
 class ClipExptDataset:
-    def __init__(self, num_workers, batch_size):
+    def __init__(self,
+                 num_workers,
+                 batch_size,
+                 root='/usr0/home/gis/research/vis_lang/data/'
+                 ):
         self.name = "Not Defined"
 
         self.train_loader = None
@@ -45,8 +49,9 @@ class ClipExptDataset:
         )
 
         # Where the datasets are saved, override if location changes
-        self.root = os.path.expanduser("/nethome/bdevnani3/raid/data/")
-
+        # self.root = os.path.expanduser("/nethome/bdevnani3/raid/data/")
+        # self.root = os.path.expanduser('/usr0/home/gis/research/vis_lang/data/')
+        self.root = root
     def get_train_loaders(self, transform_fn):
         raise NotImplementedError
 
@@ -60,9 +65,9 @@ class ClipExptDataset:
 
 
 class Cifar100(ClipExptDataset):
-    def __init__(self, num_workers, batch_size):
+    def __init__(self, num_workers, batch_size, root):
 
-        super().__init__(num_workers, batch_size)
+        super().__init__(num_workers, batch_size, root)
         self.name = "CIFAR100"
         self.train_transform = transforms.Compose(
             [
@@ -470,8 +475,8 @@ class Flowers102(ClipExptDataset):
         "bromelia": ["bromeliaceae", "monocot genus", "bromelia"],
     }
 
-    def __init__(self, num_workers, batch_size):
-        super().__init__(num_workers, batch_size)
+    def __init__(self, num_workers, batch_size, root):
+        super().__init__(num_workers, batch_size, root)
         self.name = "Flowers102"
         self.classes = [
             "pink primrose",
@@ -626,45 +631,48 @@ class Flowers102(ClipExptDataset):
 
 
 class OxfordPets(ClipExptDataset):
-    def __init__(self, num_workers, batch_size):
-        super().__init__(num_workers, batch_size)
+    def __init__(self, num_workers, batch_size, root):
+        super().__init__(num_workers, batch_size, root)
         self.name = "OxfordPets"
         self.classes = [
-            "Abyssinian",
-            "Bengal",
-            "Birman",
-            "Bombay",
-            "British",
-            "Egyptian",
-            "Maine",
-            "Persian",
-            "Ragdoll",
-            "Russian",
-            "Siamese",
-            "Sphynx",
-            "american",
-            "basset",
-            "beagle",
-            "boxer",
-            "chihuahua",
-            "english",
-            "german",
-            "great",
-            "havanese",
-            "japanese",
-            "keeshond",
-            "leonberger",
-            "miniature",
-            "newfoundland",
-            "pomeranian",
-            "pug",
-            "saint",
-            "samoyed",
-            "scottish",
-            "shiba",
-            "staffordshire",
-            "wheaten",
-            "yorkshire",
+            'Abyssinian',
+            'Bengal',
+            'Birman',
+            'Bombay',
+            'British_Shorthair',
+            'Egyptian_Mau',
+            'Maine_Coon',
+            'Persian',
+            'Ragdoll',
+            'Russian_Blue',
+            # 'Russian Blue'
+            'Siamese',
+            'Sphynx',
+            'american_bulldog',
+            'american_pit_bull_terrier',
+            'basset_hound',
+            'beagle',
+            'boxer',
+            'chihuahua',
+            'english_cocker_spaniel',
+            'english_setter',
+            'german_shorthaired',
+            'great_pyrenees',
+            'havanese',
+            'japanese_chin',
+            'keeshond',
+            'leonberger',
+            'miniature_pinscher',
+            'newfoundland',
+            'pomeranian',
+            'pug',
+            'saint_bernard',
+            'samoyed',
+            'scottish_terrier',
+            'shiba_inu',
+            'staffordshire_bull_terrier',
+            'wheaten_terrier',
+            'yorkshire_terrier'
         ]
 
     def get_train_loaders(self, transform_fn=None):
