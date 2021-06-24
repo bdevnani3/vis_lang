@@ -1,4 +1,8 @@
+This is a photo of a {}.
 This is a photo of a {}, an animal.
 This is a photo of a {}, a pet.
 This is a photo of a {}, either a cat or a dog.
 {} lives at home.
+This is a photo of a {}, a type of pet.
+A photo of a big {}.
+A photo of a small {}.
