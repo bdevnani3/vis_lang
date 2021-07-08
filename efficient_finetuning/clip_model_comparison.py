@@ -197,6 +197,8 @@ def run_expts(args):
         dataset_obj = Flowers102(args.num_workers, args.batch_size)
     elif dataset == "oxfordpets":
         dataset_obj = OxfordPets(args.num_workers, args.batch_size)
+    elif dataset == "smallflowers102":
+        dataset_obj = SmallFlowers102(args.num_workers, args.batch_size)
     results["params"]["data"] = str(args.data)
     results["params"]["batch_size"] = int(args.batch_size)
 

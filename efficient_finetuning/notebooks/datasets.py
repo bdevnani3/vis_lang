@@ -8,11 +8,15 @@ import numpy as np
 
 
 class ClipExptDataset:
-    def __init__(self,
-                 num_workers,
-                 batch_size,
-                 root='/usr0/home/gis/research/vis_lang/data/'
-                 ):
+    def __init__(
+        self,
+        num_workers,
+        batch_size,
+        root=None,
+    ):
+
+        if root == None:
+            root = "/nethome/bdevnani3/raid/data/"
         self.name = "Not Defined"
 
         self.train_loader = None
@@ -52,6 +56,7 @@ class ClipExptDataset:
         # self.root = os.path.expanduser("/nethome/bdevnani3/raid/data/")
         # self.root = os.path.expanduser('/usr0/home/gis/research/vis_lang/data/')
         self.root = root
+
     def get_train_loaders(self, transform_fn):
         raise NotImplementedError
 
@@ -167,421 +172,114 @@ class Cifar100(ClipExptDataset):
 
 
 class Flowers102(ClipExptDataset):
-
-    wordnet_synonyms = {
-        "pink primrose": [],
-        "globe thistle": ["echinops", "herb", "globe thistle"],
-        "blanket flower": [
-            "indian blanket",
-            "blanket flower",
-            "gaillardia",
-            "gaillardia pulchella",
-            "fire-wheel",
-            "fire wheel",
-        ],
-        "trumpet creeper": [
-            "bignoniaceae",
-            "campsis radicans",
-            "trumpet vine",
-            "trumpet creeper",
-        ],
-        "blackberry lily": [],
-        "snapdragon": ["flower", "antirrhinum", "snapdragon"],
-        "colt's foot": [],
-        "king protea": [
-            "honeypot",
-            "protea cynaroides",
-            "protea",
-            "genus protea",
-            "king protea",
-        ],
-        "spear thistle": [
-            "cirsium lanceolatum",
-            "bull thistle",
-            "spear thistle",
-            "boar thistle",
-            "cirsium vulgare",
-            "plume thistle",
-        ],
-        "yellow iris": [
-            "yellow water flag",
-            "yellow iris",
-            "iris",
-            "iris pseudacorus",
-            "yellow flag",
-        ],
-        "globe-flower": [],
-        "purple coneflower": [],
-        "peruvian lily": [
-            "alstroemeria",
-            "alstroemeria pelegrina",
-            "peruvian lily",
-            "genus alstroemeria",
-            "lily of the incas",
-        ],
-        "balloon flower": [
-            "balloon flower",
-            "penstemon palmeri",
-            "scented penstemon",
-            "penstemon",
-            "wildflower",
-        ],
-        "hard-leaved pocket orchid": [],
-        "giant white arum lily": [],
-        "fire lily": [],
-        "pincushion flower": [
-            "sweet scabious",
-            "scabious",
-            "mournful widow",
-            "scabiosa atropurpurea",
-            "pincushion flower",
-        ],
-        "fritillary": [
-            "bulbous plant",
-            "checkered lily",
-            "fritillary",
-            "fritillaria",
-        ],
-        "red ginger": ["alpinia", "ginger", "red ginger", "alpinia purpurata"],
-        "grape hyacinth": ["liliaceous plant", "grape hyacinth", "muscari"],
-        "corn poppy": [
-            "papaver",
-            "field poppy",
-            "corn poppy",
-            "flanders poppy",
-            "papaver rhoeas",
-            "poppy",
-        ],
-        "prince of wales feathers": [],
-        "stemless gentian": [],
-        "artichoke": [
-            "cynara scolymus",
-            "cynara",
-            "vegetable",
-            "artichoke",
-            "artichoke plant",
-            "globe artichoke",
-        ],
-        "canterbury bells": [],
-        "sweet william": ["dianthus barbatus", "sweet william", "pink"],
-        "carnation": [
-            "clove pink",
-            "carnation",
-            "dianthus caryophyllus",
-            "gillyflower",
-            "pink",
-        ],
-        "garden phlox": [],
-        "love in the mist": [],
-        "mexican aster": [],
-        "alpine sea holly": [],
-        "ruby-lipped cattleya": [],
-        "cape flower": [],
-        "great masterwort": [],
-        "siam tulip": [],
-        "sweet pea": [
-            "lathyrus",
-            "lathyrus odoratus",
-            "sweet pea",
-            "vine",
-            "sweetpea",
-        ],
-        "lenten rose": [
-            "lenten rose",
-            "black hellebore",
-            "hellebore",
-            "helleborus orientalis",
-        ],
-        "barbeton daisy": [],
-        "daffodil": ["narcissus", "narcissus pseudonarcissus", "daffodil"],
-        "sword lily": [
-            "genus gladiolus",
-            "sword lily",
-            "gladiolus",
-            "glad",
-            "gladiola",
-            "iridaceous plant",
-        ],
-        "poinsettia": [
-            "painted leaf",
-            "euphorbia",
-            "lobster plant",
-            "spurge",
-            "poinsettia",
-            "christmas flower",
-            "mexican flameleaf",
-            "christmas star",
-            "euphorbia pulcherrima",
-        ],
-        "bolero deep blue": [],
-        "wallflower": ["flower", "erysimum", "wallflower"],
-        "marigold": ["marigold", "flower", "tageteste"],
-        "buttercup": [
-            "butter-flower",
-            "herb",
-            "crowfoot",
-            "butterflower",
-            "ranunculus",
-            "goldcup",
-            "kingcup",
-            "buttercup",
-        ],
-        "oxeye daisy": [
-            "oxeye daisy",
-            "leucanthemum",
-            "composite",
-            "chrysanthemum maximum",
-            "leucanthemum maximum",
-        ],
-        "english marigold": [],
-        "common dandelion": [
-            "taraxacum officinale",
-            "common dandelion",
-            "dandelion",
-            "taraxacum ruderalia",
-        ],
-        "petunia": ["flower", "genus petunia", "petunia"],
-        "wild pansy": [
-            "pink of my john",
-            "wild pansy",
-            "love-in-idleness",
-            "viola",
-            "heartsease",
-            "johnny-jump-up",
-            "viola tricolor",
-        ],
-        "primula": ["primula", "primrose", "herb", "genus primula"],
-        "sunflower": ["flower", "genus helianthus", "sunflower", "helianthus"],
-        "pelargonium": [
-            "geraniaceae",
-            "rosid dicot genus",
-            "pelargonium",
-            "genus pelargonium",
-        ],
-        "bishop of llandaff": [],
-        "gaura": [],
-        "geranium": ["geraniaceae", "herb", "geranium"],
-        "orange dahlia": [],
-        "tiger lily": [
-            "tiger lily",
-            "lily",
-            "devil lily",
-            "kentan",
-            "lilium lancifolium",
-        ],
-        "pink-yellow dahlia": [],
-        "cautleya spicata": [],
-        "japanese anemone": [],
-        "black-eyed susan": [
-            "vine",
-            "black-eyed susan vine",
-            "thunbergia",
-            "black-eyed susan",
-            "thunbergia alata",
-        ],
-        "silverbush": [
-            "anthyllis",
-            "jupiter's beard",
-            "anthyllis barba-jovis",
-            "silverbush",
-            "shrub",
-            "silver-bush",
-        ],
-        "californian poppy": [],
-        "osteospermum": [],
-        "spring crocus": [],
-        "bearded iris": ["bearded iris", "iris", "genus iris"],
-        "windflower": ["flower", "genus anemone", "anemone", "windflower"],
-        "moon orchid": [],
-        "tree poppy": ["shrub", "bush poppy", "dendromecon", "tree poppy"],
-        "gazania": ["flower", "gazania", "genus gazania"],
-        "azalea": ["subgenus azalea", "azalea", "rhododendron"],
-        "water lily": ["water lily", "aquatic plant", "nymphaeaceae"],
-        "rose": ["shrub", "rose", "rosebush", "rosa"],
-        "thorn apple": ["thorn apple", "datura", "shrub"],
-        "morning glory": ["vine", "ipomoea", "morning glory"],
-        "passion flower": [],
-        "lotus": [
-            "sacred lotus",
-            "lotus",
-            "water lily",
-            "nelumbo nucifera",
-            "indian lotus",
-        ],
-        "toad lily": ["montia chamissoi", "toad lily", "indian lettuce"],
-        "bird of paradise": [
-            "poinciana",
-            "caesalpinia gilliesii",
-            "bird of paradise",
-            "flowering shrub",
-            "poinciana gilliesii",
-            "caesalpinia",
-        ],
-        "anthurium": [
-            "houseplant",
-            "genus anthurium",
-            "tail-flower",
-            "tailflower",
-            "anthurium",
-        ],
-        "frangipani": ["shrub", "plumeria", "frangipanni", "frangipani"],
-        "clematis": ["clematis", "vine", "genus clematis", "climber"],
-        "hibiscus": ["genus hibiscus", "hibiscus", "mallow"],
-        "columbine": [
-            "aquilege",
-            "flower",
-            "columbine",
-            "aquilegia",
-            "genus aquilegia",
-        ],
-        "desert-rose": [],
-        "tree mallow": [
-            "lavatera arborea",
-            "lavatera",
-            "tree mallow",
-            "velvet-leaf",
-            "shrub",
-            "velvetleaf",
-        ],
-        "magnolia": ["magnolia", "bark"],
-        "cyclamen": [
-            "flower",
-            "cyclamen",
-            "cyclamen purpurascens",
-            "genus cyclamen",
-        ],
-        "watercress": ["cruciferae", "watercress", "cress"],
-        "monkshood": [
-            "helmetflower",
-            "aconite",
-            "monkshood",
-            "aconitum napellus",
-            "helmet flower",
-        ],
-        "canna lily": ["canna lily", "canna", "canna generalis"],
-        "hippeastrum": [
-            "hippeastrum",
-            "genus hippeastrum",
-            "amaryllis",
-            "hippeastrum puniceum",
-        ],
-        "bee balm": ["bee balm", "monarda", "beebalm", "monarda fistulosa"],
-        "ball moss": [],
-        "foxglove": ["foxglove", "digitalis", "herb", "genus digitalis"],
-        "bougainvillea": ["genus bougainvillea", "vine", "bougainvillea"],
-        "camellia": ["shrub", "camellia", "camelia", "genus camellia"],
-        "mallow": ["shrub", "malvaceae", "mallow"],
-        "mexican petunia": [],
-        "bromelia": ["bromeliaceae", "monocot genus", "bromelia"],
-    }
-
-    def __init__(self, num_workers, batch_size, root):
+    def __init__(self, num_workers, batch_size, root=None):
         super().__init__(num_workers, batch_size, root)
         self.name = "Flowers102"
-        self.classes = [
-            "pink primrose",
-            "globe thistle",
-            "blanket flower",
-            "trumpet creeper",
-            "blackberry lily",
-            "snapdragon",
-            "colt's foot",
-            "king protea",
-            "spear thistle",
-            "yellow iris",
-            "globe-flower",
-            "purple coneflower",
-            "peruvian lily",
-            "balloon flower",
-            "hard-leaved pocket orchid",
-            "giant white arum lily",
-            "fire lily",
-            "pincushion flower",
-            "fritillary",
-            "red ginger",
-            "grape hyacinth",
-            "corn poppy",
-            "prince of wales feathers",
-            "stemless gentian",
-            "artichoke",
-            "canterbury bells",
-            "sweet william",
-            "carnation",
-            "garden phlox",
-            "love in the mist",
-            "mexican aster",
-            "alpine sea holly",
-            "ruby-lipped cattleya",
-            "cape flower",
-            "great masterwort",
-            "siam tulip",
-            "sweet pea",
-            "lenten rose",
-            "barbeton daisy",
-            "daffodil",
-            "sword lily",
-            "poinsettia",
-            "bolero deep blue",
-            "wallflower",
-            "marigold",
-            "buttercup",
-            "oxeye daisy",
-            "english marigold",
-            "common dandelion",
-            "petunia",
-            "wild pansy",
-            "primula",
-            "sunflower",
-            "pelargonium",
-            "bishop of llandaff",
-            "gaura",
-            "geranium",
-            "orange dahlia",
-            "tiger lily",
-            "pink-yellow dahlia",
-            "cautleya spicata",
-            "japanese anemone",
-            "black-eyed susan",
-            "silverbush",
-            "californian poppy",
-            "osteospermum",
-            "spring crocus",
-            "bearded iris",
-            "windflower",
-            "moon orchid",
-            "tree poppy",
-            "gazania",
-            "azalea",
-            "water lily",
-            "rose",
-            "thorn apple",
-            "morning glory",
-            "passion flower",
-            "lotus",
-            "toad lily",
-            "bird of paradise",
-            "anthurium",
-            "frangipani",
-            "clematis",
-            "hibiscus",
-            "columbine",
-            "desert-rose",
-            "tree mallow",
-            "magnolia",
-            "cyclamen",
-            "watercress",
-            "monkshood",
-            "canna lily",
-            "hippeastrum",
-            "bee balm",
-            "ball moss",
-            "foxglove",
-            "bougainvillea",
-            "camellia",
-            "mallow",
-            "mexican petunia",
-            "bromelia",
-        ]
+        self.class_label_mapping = {
+            "pink primrose": 0,
+            "globe thistle": 1,
+            "blanket flower": 2,
+            "trumpet creeper": 3,
+            "blackberry lily": 4,
+            "snapdragon": 5,
+            "colt's foot": 6,
+            "king protea": 7,
+            "spear thistle": 8,
+            "yellow iris": 9,
+            "globe-flower": 10,
+            "purple coneflower": 11,
+            "peruvian lily": 12,
+            "balloon flower": 13,
+            "hard-leaved pocket orchid": 14,
+            "giant white arum lily": 15,
+            "fire lily": 16,
+            "pincushion flower": 17,
+            "fritillary": 18,
+            "red ginger": 19,
+            "grape hyacinth": 20,
+            "corn poppy": 21,
+            "prince of wales feathers": 22,
+            "stemless gentian": 23,
+            "artichoke": 24,
+            "canterbury bells": 25,
+            "sweet william": 26,
+            "carnation": 27,
+            "garden phlox": 28,
+            "love in the mist": 29,
+            "mexican aster": 30,
+            "alpine sea holly": 31,
+            "ruby-lipped cattleya": 32,
+            "cape flower": 33,
+            "great masterwort": 34,
+            "siam tulip": 35,
+            "sweet pea": 36,
+            "lenten rose": 37,
+            "barbeton daisy": 38,
+            "daffodil": 39,
+            "sword lily": 40,
+            "poinsettia": 41,
+            "bolero deep blue": 42,
+            "wallflower": 43,
+            "marigold": 44,
+            "buttercup": 45,
+            "oxeye daisy": 46,
+            "english marigold": 47,
+            "common dandelion": 48,
+            "petunia": 49,
+            "wild pansy": 50,
+            "primula": 51,
+            "sunflower": 52,
+            "pelargonium": 53,
+            "bishop of llandaff": 54,
+            "gaura": 55,
+            "geranium": 56,
+            "orange dahlia": 57,
+            "tiger lily": 58,
+            "pink-yellow dahlia": 59,
+            "cautleya spicata": 60,
+            "japanese anemone": 61,
+            "black-eyed susan": 62,
+            "silverbush": 63,
+            "californian poppy": 64,
+            "osteospermum": 65,
+            "spring crocus": 66,
+            "bearded iris": 67,
+            "windflower": 68,
+            "moon orchid": 69,
+            "tree poppy": 70,
+            "gazania": 71,
+            "azalea": 72,
+            "water lily": 73,
+            "rose": 74,
+            "thorn apple": 75,
+            "morning glory": 76,
+            "passion flower": 77,
+            "lotus": 78,
+            "toad lily": 79,
+            "bird of paradise": 80,
+            "anthurium": 81,
+            "frangipani": 82,
+            "clematis": 83,
+            "hibiscus": 84,
+            "columbine": 85,
+            "desert-rose": 86,
+            "tree mallow": 87,
+            "magnolia": 88,
+            "cyclamen": 89,
+            "watercress": 90,
+            "monkshood": 91,
+            "canna lily": 92,
+            "hippeastrum": 93,
+            "bee balm": 94,
+            "ball moss": 95,
+            "foxglove": 96,
+            "bougainvillea": 97,
+            "camellia": 98,
+            "mallow": 99,
+            "mexican petunia": 100,
+            "bromelia": 101,
+        }
+        self.classes = list(self.class_label_mapping.keys())
 
     def get_train_loaders(self, transform_fn=None):
 
@@ -631,48 +329,47 @@ class Flowers102(ClipExptDataset):
 
 
 class OxfordPets(ClipExptDataset):
-    def __init__(self, num_workers, batch_size, root):
+    def __init__(self, num_workers, batch_size, root=None):
         super().__init__(num_workers, batch_size, root)
         self.name = "OxfordPets"
         self.classes = [
-            'Abyssinian',
-            'Bengal',
-            'Birman',
-            'Bombay',
-            'British_Shorthair',
-            'Egyptian_Mau',
-            'Maine_Coon',
-            'Persian',
-            'Ragdoll',
-            'Russian_Blue',
-            # 'Russian Blue'
-            'Siamese',
-            'Sphynx',
-            'american_bulldog',
-            'american_pit_bull_terrier',
-            'basset_hound',
-            'beagle',
-            'boxer',
-            'chihuahua',
-            'english_cocker_spaniel',
-            'english_setter',
-            'german_shorthaired',
-            'great_pyrenees',
-            'havanese',
-            'japanese_chin',
-            'keeshond',
-            'leonberger',
-            'miniature_pinscher',
-            'newfoundland',
-            'pomeranian',
-            'pug',
-            'saint_bernard',
-            'samoyed',
-            'scottish_terrier',
-            'shiba_inu',
-            'staffordshire_bull_terrier',
-            'wheaten_terrier',
-            'yorkshire_terrier'
+            "Abyssinian",
+            "Bengal",
+            "Birman",
+            "Bombay_cat",  # TODO: change this back to Bombay. Bombay_cat is something I added.
+            "British_Shorthair",
+            "Egyptian_Mau",
+            "Maine_Coon",
+            "Persian",
+            "Ragdoll",
+            "Russian_Blue",
+            "Siamese",
+            "Sphynx",
+            "american_bulldog",
+            "american_pit_bull_terrier",
+            "basset_hound",
+            "beagle",
+            "boxer",
+            "chihuahua",
+            "english_cocker_spaniel",
+            "english_setter",
+            "german_shorthaired",
+            "great_pyrenees",
+            "havanese",
+            "japanese_chin",
+            "keeshond",
+            "leonberger",
+            "miniature_pinscher",
+            "newfoundland",
+            "pomeranian",
+            "pug",
+            "saint_bernard",
+            "samoyed",
+            "scottish_terrier",
+            "shiba_inu",
+            "staffordshire_bull_terrier",
+            "wheaten_terrier",
+            "yorkshire_terrier",
         ]
 
     def get_train_loaders(self, transform_fn=None):
@@ -712,6 +409,88 @@ class OxfordPets(ClipExptDataset):
 
         test_loader = torch.utils.data.DataLoader(
             test_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+        return test_loader
+
+
+class SmallFlowers102(ClipExptDataset):
+
+    def __init__(self, num_workers, batch_size, root=None):
+        super().__init__(num_workers, batch_size, root)
+        self.name = "SmallFlowers102"
+        self.class_label_mapping = {
+             'pelargonium': 53,
+             'love in the mist': 29,
+             'silverbush': 63,
+             'great masterwort': 34,
+             'bolero deep blue': 42,
+             'hard-leaved pocket orchid': 14,
+             'petunia': 49,
+             'sword lily': 40,
+             'wallflower': 43,
+             'bougainvillea': 97,}
+
+        
+        self.classes = list(self.class_label_mapping.keys())
+        self.new_labels = {v:i for i,v in enumerate(list(self.class_label_mapping.values()))}
+
+    def get_train_loaders(self, transform_fn="Not Specified"):
+
+        if transform_fn is "Not Specified":
+            transform_fn = self.train_transform
+
+        train_dataset = datasets.ImageFolder(
+            self.root + "flower_data/train", transform=transform_fn
+        )
+
+        train_dataset.target_transform = lambda id: self.new_labels[id]
+        
+        train_indices = np.argwhere(np.isin(np.array(train_dataset.targets),list(self.class_label_mapping.values()))).flatten()
+        
+        small_train_dataset = torch.utils.data.Subset(train_dataset, train_indices)
+
+        valid_dataset = datasets.ImageFolder(
+            self.root + "flower_data/valid", transform=transform_fn
+        )
+
+        valid_dataset.target_transform = lambda id: self.new_labels[id]
+        valid_indices = np.argwhere(np.isin(np.array(valid_dataset.targets),list(self.class_label_mapping.values()))).flatten()
+
+        small_valid_dataset = torch.utils.data.Subset(valid_dataset, valid_indices)
+        
+        train_loader = torch.utils.data.DataLoader(
+            small_train_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+        valid_loader = torch.utils.data.DataLoader(
+            small_valid_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+        return train_loader, valid_loader
+
+    def get_test_loader(self, transform_fn="Not Specified"):
+
+        if transform_fn is "Not Specified":
+            transform_fn = self.test_transform
+
+        test_dataset = datasets.ImageFolder(
+            self.root + "flower_data/test", transform=transform_fn
+        )
+        
+        test_dataset.target_transform = lambda id: self.new_labels[id]
+
+        test_indices = np.argwhere(np.isin(np.array(test_dataset.targets),list(self.class_label_mapping.values()))).flatten()
+
+        small_test_dataset = torch.utils.data.Subset(test_dataset, test_indices)
+
+        test_loader = torch.utils.data.DataLoader(
+            small_test_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
         )
