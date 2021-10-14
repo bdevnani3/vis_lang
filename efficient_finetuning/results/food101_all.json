@@ -1,0 +1,1 @@
+{"params": {"data": "food101", "batch_size": 100, "clip_model": "ViT-B/32", "phrases_file": "configs/phrases/food.txt", "c_clip": 0, "c_resnet": 0}, "clip_zs": {"Top1": [78.36303630363037, 0.0], "Top5": 95.15511551155116}, "clip_lp": {"Top1": [84.14521452145215, 0.0]}, "resnet_lp": {"Top1": [62.069174917491736, 0.021598649369887892]}}

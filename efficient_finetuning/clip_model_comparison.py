@@ -15,6 +15,9 @@ import json
 
 from datasets import *
 
+def get_stats(l):
+    return np.mean(l), np.var(l)
+
 results_path = "results"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -199,6 +202,8 @@ def run_expts(args):
         dataset_obj = OxfordPets(args.num_workers, args.batch_size)
     elif dataset == "smallflowers102":
         dataset_obj = SmallFlowers102(args.num_workers, args.batch_size)
+    elif dataset == "food101":
+        dataset_obj = Food101(args.num_workers, args.batch_size)
     results["params"]["data"] = str(args.data)
     results["params"]["batch_size"] = int(args.batch_size)
 
@@ -214,25 +219,32 @@ def run_expts(args):
         results["params"]["clip_model"] = str(args.clip_model)
 
         if "clip_zs" in args.expts:
-            print("-------------------------------------")
-            print(f"Running Clip Zeroshot on {dataset_obj.name}")
-            print("-------------------------------------")
-            czs = clip_zero_shot(
-                test_loader,
-                dataset_obj.classes,
-                phrase_file=args.phrases_file,
-            )
-            print(f"Clip Zero Shot Acc: {czs[0]}")
-            results["clip_zs"] = {"Top1": czs[0], "Top5": czs[1]}
+
+            out = []
+            for i in range(5):
+                print("-------------------------------------")
+                print(f"Running Clip Zeroshot on {dataset_obj.name}, {i}")
+                print("-------------------------------------")
+                czs = clip_zero_shot(
+                    test_loader,
+                    dataset_obj.classes,
+                    phrase_file=args.phrases_file,
+                )
+                out.append(czs[0])
+            print(f"Clip Zero Shot Acc: {get_stats(out)}")
+            results["clip_zs"] = {"Top1": get_stats(out), "Top5": czs[1]}
             results["params"]["phrases_file"] = str(args.phrases_file)
 
         if "clip_lp" in args.expts:
-            print("-------------------------------------")
-            print(f"Running Clip Linear Probe on {dataset_obj.name}")
-            print("-------------------------------------")
-            clp = clip_linear_probe(train_loader, test_loader, dataset_obj.classes)
-            print(f"Clip Linear Probe Acc: {clp[0]}")
-            results["clip_lp"] = {"Top1": clp[0]}
+            out = []
+            for i in range(5):
+                print("-------------------------------------")
+                print(f"Running Clip Linear Probe on {dataset_obj.name}, {i}")
+                print("-------------------------------------")
+                clp = clip_linear_probe(train_loader, test_loader, dataset_obj.classes)
+                out.append(clp[0])
+            print(f"Clip Linear Probe Acc: {get_stats(out)}")
+            results["clip_lp"] = {"Top1": get_stats(out)}
             results["params"]["c_clip"] = int(args.c_clip)
 
     if "resnet_lp" in args.expts:
@@ -241,14 +253,17 @@ def run_expts(args):
             resnet_model = torch.hub.load(
                 "pytorch/vision:v0.8.2", "resnet50", pretrained=True
             )
-        print("-------------------------------------")
-        print(f"Running Resnet50 Linear Probe on {dataset_obj.name}")
-        print("-------------------------------------")
-        train_loader, _ = dataset_obj.get_train_loaders()
-        test_loader = dataset_obj.get_test_loader()
-        rlp = resnet_linear_probe(train_loader, test_loader, dataset_obj.classes)
-        print(f"Resnet50 Linear Probe Acc: {rlp[0]}")
-        results["resnet_lp"] = {"Top1": rlp[0]}
+        out = []
+        for i in range(5):
+            print("-------------------------------------")
+            print(f"Running Resnet50 Linear Probe on {dataset_obj.name}, {i}")
+            print("-------------------------------------")
+            train_loader, _ = dataset_obj.get_train_loaders()
+            test_loader = dataset_obj.get_test_loader()
+            rlp = resnet_linear_probe(train_loader, test_loader, dataset_obj.classes)
+            out.append(rlp[0])
+        print(f"Resnet50 Linear Probe Acc: {get_stats(out)}")
+        results["resnet_lp"] = {"Top1": get_stats(out)}
         results["params"]["c_resnet"] = int(args.c_resnet)
 
     with open(f"{results_path}/{args.task_name}.json", "w") as outfile:

@@ -14,6 +14,6 @@ num_workers: 4 # Dataloader
 batch_size: 100 # Dataloader
 
 clip_model: "ViT-B/32" # ['RN50', 'RN101', 'RN50x4', 'ViT-B/32'] , options can be seen using clip.available_models()
-phrases_file: "configs/phrases/flowers.txt" # txt file consisting of phrases to use for clip zero shot
+phrases_file: "configs/phrases/flowers_simple.txt" # txt file consisting of phrases to use for clip zero shot
 
 

@@ -1,1 +1,1 @@
-This is a photo of a {}, a pet.
+This is a {}, a cat or dog.

@@ -1,3 +1,6 @@
+from PIL.Image import NONE
+from numpy.core.arrayprint import _none_or_positive_arg
+from numpy.core.fromnumeric import _nonzero_dispatcher
 from torchvision.datasets import CIFAR100
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data import Dataset
@@ -5,6 +8,7 @@ from torchvision import datasets, transforms, models
 import os
 import torch
 import numpy as np
+import random
 
 
 class ClipExptDataset:
@@ -70,7 +74,7 @@ class ClipExptDataset:
 
 
 class Cifar100(ClipExptDataset):
-    def __init__(self, num_workers, batch_size, root):
+    def __init__(self, num_workers, batch_size, root=None):
 
         super().__init__(num_workers, batch_size, root)
         self.name = "CIFAR100"
@@ -98,17 +102,21 @@ class Cifar100(ClipExptDataset):
             ]
         )
 
-    def get_train_loaders(self, transform_fn=None):
+    def get_train_loaders(self, transform_fn=None, num_elements_per_class=-1, clip_embedding=False, shuffle=True):
 
         if transform_fn is None:
             transform_fn = self.train_transform
-
+            
         train_dataset = CIFAR100(
             root=self.root,
             train=True,
             download=True,
             transform=transform_fn,
         )
+
+        if num_elements_per_class >=0:
+            train_dataset = get_n_items_per_class(train_dataset, num_elements_per_class)
+
 
         valid_dataset = CIFAR100(
             root=self.root,
@@ -120,8 +128,9 @@ class Cifar100(ClipExptDataset):
         num_train = len(train_dataset)
         indices = list(range(num_train))
         split = int(np.floor(self.valid_size * num_train))
+        random.shuffle(indices)
 
-        train_idx, valid_idx = indices[split:], indices[:split]
+        train_idx, valid_idx = indices[:], indices[:split]
         train_sampler = SubsetRandomSampler(train_idx)
         valid_sampler = SubsetRandomSampler(valid_idx)
 
@@ -130,6 +139,7 @@ class Cifar100(ClipExptDataset):
             batch_size=self.batch_size,
             sampler=train_sampler,
             num_workers=self.num_workers,
+            shuffle=shuffle
         )
         valid_loader = torch.utils.data.DataLoader(
             valid_dataset,
@@ -281,7 +291,7 @@ class Flowers102(ClipExptDataset):
         }
         self.classes = list(self.class_label_mapping.keys())
 
-    def get_train_loaders(self, transform_fn=None):
+    def get_train_loaders(self, transform_fn=None, num_elements_per_class=-1, shuffle=True):
 
         if transform_fn is None:
             transform_fn = self.train_transform
@@ -289,6 +299,9 @@ class Flowers102(ClipExptDataset):
         train_dataset = datasets.ImageFolder(
             self.root + "flower_data/train", transform=transform_fn
         )
+
+        if num_elements_per_class >=0:
+            train_dataset = get_n_items_per_class(train_dataset, num_elements_per_class)
 
         valid_dataset = datasets.ImageFolder(
             self.root + "flower_data/valid", transform=transform_fn
@@ -298,6 +311,7 @@ class Flowers102(ClipExptDataset):
             train_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            shuffle=shuffle
         )
         valid_loader = torch.utils.data.DataLoader(
             valid_dataset,
@@ -372,7 +386,7 @@ class OxfordPets(ClipExptDataset):
             "yorkshire_terrier",
         ]
 
-    def get_train_loaders(self, transform_fn=None):
+    def get_train_loaders(self, transform_fn=None, num_elements_per_class=-1, shuffle=True):
 
         if transform_fn is None:
             transform_fn = self.train_transform
@@ -380,6 +394,9 @@ class OxfordPets(ClipExptDataset):
         train_dataset = datasets.ImageFolder(
             self.root + "oxford_pets/train", transform=transform_fn
         )
+
+        if num_elements_per_class >=0:
+            train_dataset = get_n_items_per_class(train_dataset, num_elements_per_class)
 
         valid_dataset = datasets.ImageFolder(
             self.root + "oxford_pets/valid", transform=transform_fn
@@ -389,6 +406,7 @@ class OxfordPets(ClipExptDataset):
             train_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            shuffle=shuffle
         )
         valid_loader = torch.utils.data.DataLoader(
             valid_dataset,
@@ -416,6 +434,7 @@ class OxfordPets(ClipExptDataset):
         return test_loader
 
 
+
 class SmallFlowers102(ClipExptDataset):
 
     def __init__(self, num_workers, batch_size, root=None):
@@ -437,9 +456,9 @@ class SmallFlowers102(ClipExptDataset):
         self.classes = list(self.class_label_mapping.keys())
         self.new_labels = {v:i for i,v in enumerate(list(self.class_label_mapping.values()))}
 
-    def get_train_loaders(self, transform_fn="Not Specified"):
+    def get_train_loaders(self, transform_fn=None, num_elements_per_class=-1):
 
-        if transform_fn is "Not Specified":
+        if transform_fn is None:
             transform_fn = self.train_transform
 
         train_dataset = datasets.ImageFolder(
@@ -451,6 +470,10 @@ class SmallFlowers102(ClipExptDataset):
         train_indices = np.argwhere(np.isin(np.array(train_dataset.targets),list(self.class_label_mapping.values()))).flatten()
         
         small_train_dataset = torch.utils.data.Subset(train_dataset, train_indices)
+        small_train_dataset.targets = np.array(train_dataset.targets)[train_indices]
+
+        if num_elements_per_class >=0:
+            train_dataset = get_n_items_per_class(small_train_dataset, num_elements_per_class)
 
         valid_dataset = datasets.ImageFolder(
             self.root + "flower_data/valid", transform=transform_fn
@@ -474,9 +497,9 @@ class SmallFlowers102(ClipExptDataset):
 
         return train_loader, valid_loader
 
-    def get_test_loader(self, transform_fn="Not Specified"):
+    def get_test_loader(self, transform_fn=None):
 
-        if transform_fn is "Not Specified":
+        if transform_fn is None:
             transform_fn = self.test_transform
 
         test_dataset = datasets.ImageFolder(
@@ -496,3 +519,69 @@ class SmallFlowers102(ClipExptDataset):
         )
 
         return test_loader
+
+
+class Food101(ClipExptDataset):
+    def __init__(self, num_workers, batch_size, root=None):
+        super().__init__(num_workers, batch_size, root)
+        self.name = "Food101"
+
+    def get_train_loaders(self, transform_fn=None, num_elements_per_class=-1):
+
+        if transform_fn is None:
+            transform_fn = self.train_transform
+
+        train_dataset = datasets.ImageFolder(
+            self.root + "food101/train", transform=transform_fn
+        )
+
+        if num_elements_per_class >=0:
+            train_dataset = get_n_items_per_class(train_dataset, num_elements_per_class)
+
+        valid_dataset = datasets.ImageFolder(
+            self.root + "food101/valid", transform=transform_fn
+        )
+
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+        valid_loader = torch.utils.data.DataLoader(
+            valid_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+        if self.classes == None:
+            self.classes = train_dataset.classes
+
+        return train_loader, valid_loader
+
+    def get_test_loader(self, transform_fn=None):
+
+        if transform_fn is None:
+            transform_fn = self.test_transform
+
+        test_dataset = datasets.ImageFolder(
+            self.root + "food101/test", transform=transform_fn
+        )
+
+        test_loader = torch.utils.data.DataLoader(
+            test_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+        )
+
+        return test_loader
+
+def get_n_items_per_class(dataset, n):
+
+    final_indices = []
+
+    for label in list(set(dataset.targets)):
+        class_inds = random.sample(list(np.argwhere(np.array(dataset.targets)==label).flatten()),n)
+        final_indices.extend(class_inds)
+
+    return torch.utils.data.Subset(dataset, final_indices)
+
