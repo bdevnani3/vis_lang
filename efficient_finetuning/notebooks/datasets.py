@@ -113,9 +113,13 @@ class Cifar100(ClipExptDataset):
             download=True,
             transform=transform_fn,
         )
+        print(len(train_dataset))
+        classes = train_dataset.classes
 
         if num_elements_per_class >=0:
+            print("HERE")
             train_dataset = get_n_items_per_class(train_dataset, num_elements_per_class)
+            print(len(train_dataset))
 
 
         valid_dataset = CIFAR100(
@@ -138,8 +142,7 @@ class Cifar100(ClipExptDataset):
             train_dataset,
             batch_size=self.batch_size,
             sampler=train_sampler,
-            num_workers=self.num_workers,
-            shuffle=shuffle
+            num_workers=self.num_workers
         )
         valid_loader = torch.utils.data.DataLoader(
             valid_dataset,
@@ -150,9 +153,9 @@ class Cifar100(ClipExptDataset):
 
         # Little hacky - need to improve
         if self.classes == None:
-            self.classes = train_dataset.classes
+            self.classes = classes
 
-        return train_loader, valid_loader
+        return train_loader, valid_loader, train_dataset, valid_dataset
 
     def get_test_loader(self, transform_fn=None):
 
@@ -175,7 +178,7 @@ class Cifar100(ClipExptDataset):
         if self.classes == None:
             self.classes = test_dataset.classes
 
-        return test_loader
+        return test_loader, test_dataset
 
 
 ##################################
@@ -319,7 +322,7 @@ class Flowers102(ClipExptDataset):
             num_workers=self.num_workers,
         )
 
-        return train_loader, valid_loader
+        return train_loader, valid_loader, train_dataset, valid_dataset
 
     def get_test_loader(self, transform_fn=None):
 
@@ -336,7 +339,7 @@ class Flowers102(ClipExptDataset):
             num_workers=self.num_workers,
         )
 
-        return test_loader
+        return test_loader, test_dataset
 
 
 ##################################
@@ -412,9 +415,10 @@ class OxfordPets(ClipExptDataset):
             valid_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            shuffle=shuffle
         )
 
-        return train_loader, valid_loader
+        return train_loader, valid_loader, train_dataset, valid_dataset
 
     def get_test_loader(self, transform_fn=None):
 
@@ -431,7 +435,7 @@ class OxfordPets(ClipExptDataset):
             num_workers=self.num_workers,
         )
 
-        return test_loader
+        return test_loader, test_dataset
 
 
 
@@ -526,7 +530,7 @@ class Food101(ClipExptDataset):
         super().__init__(num_workers, batch_size, root)
         self.name = "Food101"
 
-    def get_train_loaders(self, transform_fn=None, num_elements_per_class=-1):
+    def get_train_loaders(self, transform_fn=None, num_elements_per_class=-1, shuffle=True):
 
         if transform_fn is None:
             transform_fn = self.train_transform
@@ -534,6 +538,7 @@ class Food101(ClipExptDataset):
         train_dataset = datasets.ImageFolder(
             self.root + "food101/train", transform=transform_fn
         )
+        clss = train_dataset.classes
 
         if num_elements_per_class >=0:
             train_dataset = get_n_items_per_class(train_dataset, num_elements_per_class)
@@ -546,17 +551,19 @@ class Food101(ClipExptDataset):
             train_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            shuffle=shuffle
         )
         valid_loader = torch.utils.data.DataLoader(
             valid_dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
+            shuffle=shuffle
         )
 
         if self.classes == None:
-            self.classes = train_dataset.classes
+            self.classes = clss
 
-        return train_loader, valid_loader
+        return train_loader, valid_loader, train_dataset, valid_dataset
 
     def get_test_loader(self, transform_fn=None):
 
@@ -573,7 +580,7 @@ class Food101(ClipExptDataset):
             num_workers=self.num_workers,
         )
 
-        return test_loader
+        return test_loader, test_dataset
 
 def get_n_items_per_class(dataset, n):
 
@@ -584,4 +591,3 @@ def get_n_items_per_class(dataset, n):
         final_indices.extend(class_inds)
 
     return torch.utils.data.Subset(dataset, final_indices)
-

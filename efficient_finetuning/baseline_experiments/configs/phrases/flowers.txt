@@ -1,0 +1,7 @@
+'a photo of a {}, a kind of flower.'
+'a photo of many {}.'
+'a beautiful {}'
+'many beatiful {}'
+'a flower of type: {}'
+'a {} with leaves.'
+'a {} with petals.

@@ -1,0 +1,36 @@
+#### Dataset Configs
+train_datasets: "cifar100"
+
+
+#### Training Configs
+
+n_ways: [100]
+n_shots: [1]
+n_episodes: [5]
+n_epochs: 500
+batch_size: 5
+
+
+#### Model Configs
+model: "transformer_encoder"
+# model: "mlp" 
+
+# Lamda
+lambda:
+  lr: 0.0001
+
+# MLP
+mlp:
+  lr: 0.0001
+
+
+# Transformer
+transformer_encoder:
+  lr: 0.0001
+  feedforward_dim: 512
+  reduction_factor: 2
+  kdim: -1
+  vdim: -1
+  n_layers: 1
+  loss_reduction: "max"
+  n_heads: 1

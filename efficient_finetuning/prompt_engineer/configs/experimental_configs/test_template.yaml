@@ -1,0 +1,15 @@
+#### Dataset Configs
+test_dataset: "cifar100"
+
+
+#### Test Configs
+
+n_way: -1
+n_shots: [1,2,4,8,16]
+n_episodes: 10 # number of iterations for test time
+batch_size: 5
+
+
+#### Model Configs
+# model: "mlp" 
+trained_model: "cifar100_mlp_100way_1shot_10episodes_400epochs_lr0.0001"

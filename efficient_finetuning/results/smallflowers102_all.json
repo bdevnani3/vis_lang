@@ -1,1 +1,0 @@
-{"params": {"data": "smallflowers102", "batch_size": 100, "clip_model": "ViT-B/32", "phrases_file": "configs/phrases/flowers.txt", "c_clip": 0, "c_resnet": 0}, "clip_zs": {"Top1": 56.75675675675676, "Top5": 90.09009009009009}, "clip_lp": {"Top1": 99.09909909909909}, "resnet_lp": {"Top1": 98.29059829059828}}
